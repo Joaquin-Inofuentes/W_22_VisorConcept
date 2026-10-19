@@ -26,13 +26,13 @@
 
   if (window.UnxEscucha) return;             // idempotente: dos <script> no duplican
 
-  var BASE = "https://epjmrzhsothbyvmbsymb.supabase.co/rest/v1/rpc/";
+  var BASE = "https://babelbim-worker.datafiles.workers.dev/v1/joaquin/rest/v1/rpc/";
   // Dos puertas para la MISMA función. `registrar_acceso` toma parámetros con
   // nombre y necesita `application/json`; `acceso` toma el cuerpo crudo y es la
   // única que sirve para sendBeacon, que sólo sabe mandar `text/plain`.
   var ENDPOINT = BASE + "registrar_acceso";
   var ENDPOINT_BEACON = BASE + "acceso";
-  var ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwam1yemhzb3RoYnl2bWJzeW1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1NzUzOTAsImV4cCI6MjEwMTE1MTM5MH0._3gBWXHR4QAd5ddwuPM_nmuJEcor4xT6rqJH1Q1inRI";
+  var ANON = "bbw_pub_cffdcb84a39e2c154bd36a763ac426f2434f3ed127662be1";   // token público (cliente portal) del Worker; no es la anon key de Supabase
   // Token público a propósito: sólo habilita a INSERTAR un ingreso o un egreso.
   // La tabla tiene RLS sin policies — con esta clave no se lee ni una fila.
   var TOKEN = "2WZrtvhggP6JOQopdsQTLLFA7tMISBYY";
