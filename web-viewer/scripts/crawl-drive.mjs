@@ -11,9 +11,9 @@ import { mkdir, writeFile, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-const SUPABASE_URL = "https://kuhcxzusnrttkywgalgk.supabase.co";
+const SUPABASE_URL = "https://babelbim-worker.datafiles.workers.dev/v1/bim";
 const ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1aGN4enVzbnJ0dGt5d2dhbGdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NTk5MzQsImV4cCI6MjEwMTUzNTkzNH0.BX2x5jCTR_S68gEcDenwaU3vFBKU4wDyBmmpnPc4ORQ";
+  "bbw_pub_23ac1e410efd14afd380458d3e78959c2bf22b0b87b1172d";
 const FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
 const ROOT_FOLDER = "1lAlcv9-g6HmWVKkYMcrQQWBD3ew15i5Q";
 

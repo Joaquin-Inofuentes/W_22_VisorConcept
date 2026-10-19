@@ -1,8 +1,8 @@
 // Audita cada file_id de drive_folder_cache pegandole al proxy con Range de 1
 // byte (no descarga el archivo completo). Reporta cuales fallan.
-const SUPABASE_URL = "https://kuhcxzusnrttkywgalgk.supabase.co";
+const SUPABASE_URL = "https://babelbim-worker.datafiles.workers.dev/v1/bim";
 const ANON =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1aGN4enVzbnJ0dGt5d2dhbGdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NTk5MzQsImV4cCI6MjEwMTUzNTkzNH0.BX2x5jCTR_S68gEcDenwaU3vFBKU4wDyBmmpnPc4ORQ";
+  "bbw_pub_23ac1e410efd14afd380458d3e78959c2bf22b0b87b1172d";
 
 const files = JSON.parse(process.argv[2] ? await (await import("node:fs")).promises.readFile(process.argv[2], "utf8") : "[]");
 

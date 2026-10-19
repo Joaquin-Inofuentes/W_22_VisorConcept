@@ -23,8 +23,8 @@ if (!/localhost|127\.0\.0\.1/.test(BASE)) {
 }
 
 const K =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1aGN4enVzbnJ0dGt5d2dhbGdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NTk5MzQsImV4cCI6MjEwMTUzNTkzNH0.BX2x5jCTR_S68gEcDenwaU3vFBKU4wDyBmmpnPc4ORQ";
-const FN = "https://kuhcxzusnrttkywgalgk.supabase.co/functions/v1/concepts-drive";
+  "bbw_pub_23ac1e410efd14afd380458d3e78959c2bf22b0b87b1172d";
+const FN = "https://babelbim-worker.datafiles.workers.dev/v1/bim/functions/v1/concepts-drive";
 
 await mkdir(OUT, { recursive: true });
 const manifest = JSON.parse(await readFile(path.join(CACHE_DIR, "manifest.json"), "utf8"));
