@@ -1,0 +1,15 @@
+{
+  "slug": "w-22-visorconcept",
+  "servicios": [
+    "babelbim-worker",
+    "unx-gemini",
+    "unx-metricas-cf",
+    "mip",
+    "unx-visor-modelos",
+    "unx-visor-capturas",
+    "unx-proyectos-delta",
+    "babelbim-subidas"
+  ],
+  "raiz": "web-viewer",
+  "instalar": "npm ci"
+}

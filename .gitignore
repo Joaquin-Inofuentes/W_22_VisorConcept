@@ -20,3 +20,5 @@ APK/jadx_log.txt
 # Se regenera con sdkmanager y no tiene por que vivir en el repo.
 AndroidSimulator/
 APK/_patch/
+cf/.dist/
+.wrangler/
