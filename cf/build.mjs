@@ -38,6 +38,15 @@ if (vj.buildCommand) {
 }
 copiar(join(REPO, sub), PUB, sub ? new Set([...EXCLUIR].filter((x) => x !== "docs")) : EXCLUIR);
 
+// commit.json: sha + fecha ISO del commit desplegado. Lo lee el Portal para el
+// título de la barra ("Nombre · dd/mm/aaaa hh:mm"). Sin git (o sin .git) no se escribe.
+try {
+  const g = (a) => spawnSync("git", ["-C", REPO, ...a], { encoding: "utf8" }).stdout.trim();
+  const sha = process.env.WORKERS_CI_COMMIT_SHA || g(["rev-parse", "HEAD"]);
+  const fecha = g(["log", "-1", "--format=%cI"]);
+  if (sha || fecha) writeFileSync(join(PUB, "commit.json"), JSON.stringify({ sha, fecha }));
+} catch {}
+
 // ---------- 2. vercel.json -> _headers / _redirects / reglas del Worker ----------
 function expandir(p) {
   p = p.replace(/\\\./g, ".").replace(/\\-/g, "-");
