@@ -9,7 +9,14 @@ import { ubicarArchivo } from './Gallery/supabaseClient';
 import { DEMO_FILE_ID, DEMO_FILE_NAME } from './config';
 import { applyTierFromUrl } from './device';
 import { temaGuardado, aplicarTema } from './theme';
-import { construirRuta, leerRuta, irA, aSlug } from './rutas';
+import {
+  construirRuta,
+  leerRuta,
+  irA,
+  aSlug,
+  decidirEscrituraCarpeta,
+  esLaMismaCarpeta,
+} from './rutas';
 import { fase, listo } from './lib/centinela';
 import { iniciarSondeo } from './Gallery/transporte';
 import './index.css';
@@ -72,7 +79,10 @@ function App() {
    * entrada de "adelante" desaparecia y el boton dejaba de responder. La URL
    * que vino del historial ya es la correcta: no hay nada que escribir.
    */
-  const resolviendoRutaRef = useRef(false);
+  // Arranca en true si se entro por una ruta (/concept/a/b): el primer aviso
+  // de la galeria es el de la raiz al montarse, ANTES de resolver la ruta, y
+  // reemplazaba la URL por /concept/ un instante.
+  const resolviendoRutaRef = useRef(leerRuta().length > 0);
   const rutaCarpetaRef = useRef<string[]>([]);
 
   const submitUserName = (name: string) => {
@@ -93,15 +103,23 @@ function App() {
   const hayDibujoRef = useRef(false);
 
   const openRemote = useCallback(
-    (fileId: string, name: string, originRect: DOMRect | null = null, ruta: string[] = []) => {
+    (
+      fileId: string,
+      name: string,
+      originRect: DOMRect | null = null,
+      ruta: string[] = [],
+      desdeUrl = false
+    ) => {
       closedRef.current = false;
       hayDibujoRef.current = true;
       setFileData({ kind: 'remote', fileId, name, originRect, ruta });
       // Traza, no arranque: listo() ya se llamo con la galeria. Sirve para
       // que la fila de un F4005 diga en que dibujo paso.
       fase(`dibujo:${fileId}`);
-      // La URL pasa a apuntar al dibujo, asi el link se puede compartir.
-      irA(construirRuta(ruta, name));
+      // La URL pasa a apuntar al dibujo, asi el link se puede compartir. Solo
+      // un clic apila historial: abrirlo por resolver la URL (link directo,
+      // atras/adelante, ?file=) reemplaza, para no dejar entradas sin gesto.
+      irA(construirRuta(ruta, name), desdeUrl);
       void registrarAbierto({ id: fileId, nombre: name, ruta, slug: construirRuta(ruta, name) });
     },
     []
@@ -129,14 +147,21 @@ function App() {
     irA(construirRuta(rutaCarpetaRef.current));
   }, []);
 
-  const alCambiarRutaCarpeta = useCallback((ruta: string[]) => {
+  // Entrar a una carpeta POR CLIC apila una entrada: asi el Atras del
+  // navegador (y el del Portal) vuelve a la carpeta anterior en vez de
+  // preguntar «¿Salir de Concept?» al primer toque. Lo que no es un clic
+  // (carga inicial, resolver una ruta del historial) nunca apila.
+  // Con un dibujo abierto manda la ruta del dibujo, no la de la carpeta.
+  const alCambiarRutaCarpeta = useCallback((ruta: string[], porUsuario: boolean) => {
     rutaCarpetaRef.current = ruta;
-    if (resolviendoRutaRef.current) {
-      resolviendoRutaRef.current = false;
-      return;
-    }
-    // Con un dibujo abierto manda la ruta del dibujo, no la de la carpeta.
-    if (!hayDibujoRef.current) irA(construirRuta(ruta), true);
+    const { escritura, sigueResolviendo } = decidirEscrituraCarpeta({
+      porUsuario,
+      resolviendo: resolviendoRutaRef.current,
+      hayDibujo: hayDibujoRef.current,
+    });
+    resolviendoRutaRef.current = sigueResolviendo;
+    if (escritura === 'apilar') irA(construirRuta(ruta));
+    else if (escritura === 'reemplazar') irA(construirRuta(ruta), true);
   }, []);
 
   // Atajos para abrir un dibujo puntual sin navegar la galeria:
@@ -154,7 +179,7 @@ function App() {
     // Sin esto un link `?file=<id>` mostraba el id crudo en "ultimos abiertos"
     // y dejaba una URL sin carpetas.
     const provisorio = params.has('demo') ? DEMO_FILE_NAME : id;
-    openRemote(id, provisorio, null, []);
+    openRemote(id, provisorio, null, [], true);
     void ubicarArchivo(id).then((info) => {
       if (!info) return;
       // Si el usuario ya cerro el dibujo (o abrio otro) mientras esto
@@ -201,8 +226,12 @@ function App() {
       });
       // Ya estando en ese dibujo no hay nada que resolver; volver a pedirlo
       // solo lo recargaria.
+      // Si la URL pide justo la carpeta que la galeria ya muestra, la galeria
+      // no resuelve nada ni avisa (ver su efecto de `rutaInicial`): marcar
+      // "resolviendo" ahi dejaba la bandera colgada y se comia el proximo
+      // aviso. Pasa al volver de un dibujo abierto por clic a su carpeta.
       if (!apuntaAlAbierto) {
-        resolviendoRutaRef.current = true;
+        resolviendoRutaRef.current = !esLaMismaCarpeta(partes, rutaCarpetaRef.current);
         setRutaInicial(partes);
       }
     };

@@ -78,3 +78,46 @@ export function irA(ruta: string, reemplazar = false) {
   if (reemplazar) window.history.replaceState({}, "", destino);
   else window.history.pushState({}, "", destino);
 }
+
+/** Firma de una pila de carpetas (por nombre) o de una ruta (por slug): los
+ * slugs unidos con "/". Sirve para comparar "lo que dice la URL" con "lo que
+ * muestra la galeria" sin importar si vino de nombres o de slugs. */
+export function firmaCarpetas(nombres: string[]): string {
+  return nombres.map(aSlug).join("/");
+}
+
+/** La ruta leida de la URL (`partes`, slugs) es exactamente la carpeta que ya
+ * se muestra (`carpetas`, nombres)? Entonces la galeria no tiene nada que
+ * resolver y NO va a avisar su ruta. */
+export function esLaMismaCarpeta(partes: string[], carpetas: string[]): boolean {
+  return partes.join("/") === firmaCarpetas(carpetas);
+}
+
+export type EscrituraUrl = "apilar" | "reemplazar" | "nada";
+
+/**
+ * Que hacer con la URL cuando la galeria avisa que cambio de carpeta.
+ *
+ * Regla del Portal: el boton Atras del navegador recorre los pasos internos de
+ * la app, asi que entrar a una carpeta POR UN GESTO del usuario apila una
+ * entrada (pushState). Todo lo demas (la carga inicial, resolver una ruta que
+ * vino de un link) solo reemplaza: apilar sin gesto deja entradas fantasma y
+ * el primer Atras no hace nada visible.
+ *
+ * - `porUsuario`: el cambio salio de un clic (entrar, migas, "volver").
+ * - `resolviendo`: se esta mostrando una ruta que vino del HISTORIAL
+ *   (atras/adelante); la URL ya es la correcta, no hay que tocarla.
+ * - `hayDibujo`: con un dibujo abierto manda la URL del dibujo.
+ *
+ * `sigueResolviendo` es el nuevo valor de la bandera `resolviendo`: el aviso
+ * de la galeria siempre la consume.
+ */
+export function decidirEscrituraCarpeta(o: {
+  porUsuario: boolean;
+  resolviendo: boolean;
+  hayDibujo: boolean;
+}): { escritura: EscrituraUrl; sigueResolviendo: boolean } {
+  if (o.porUsuario) return { escritura: o.hayDibujo ? "nada" : "apilar", sigueResolviendo: false };
+  if (o.resolviendo) return { escritura: "nada", sigueResolviendo: false };
+  return { escritura: o.hayDibujo ? "nada" : "reemplazar", sigueResolviendo: false };
+}

@@ -19,7 +19,7 @@ import { gatherExportMetadata } from "./exportMetadata";
 import { logDescarga, logBuscar, logTema } from "./analytics";
 import { openConceptsRemote, parseConceptsRemote } from "../VisorConcept/parser";
 import { DRIVE_FOLDER_ID } from "../config";
-import { aSlug } from "../rutas";
+import { aSlug, firmaCarpetas } from "../rutas";
 import { alternarTema, temaGuardado } from "../theme";
 import type { Tema } from "../theme";
 import { listarRecientes, vaciarRecientes } from "./recientes";
@@ -64,13 +64,23 @@ interface GalleryProps {
   hidden: boolean;
   /** `ruta` son los nombres de las carpetas contenedoras (sin la raiz): sirve
    * para armar la URL compartible y la lista de recientes. */
-  onOpen: (fileId: string, name: string, originRect: DOMRect | null, ruta: string[]) => void;
+  onOpen: (
+    fileId: string,
+    name: string,
+    originRect: DOMRect | null,
+    ruta: string[],
+    /** true cuando el dibujo se abre por resolver la URL (link directo o
+     * atras/adelante), no por un clic: la URL solo se reemplaza. */
+    desdeUrl?: boolean
+  ) => void;
   onUpload: (file: File, name: string) => void;
   /** Carpetas (por slug) a las que hay que navegar al arrancar, tomadas de la
    * URL. La galeria las resuelve contra el arbol de Drive. */
   rutaInicial?: string[];
-  /** Avisa la ruta actual para que App actualice la URL. */
-  onRutaCambio?: (ruta: string[]) => void;
+  /** Avisa la ruta actual para que App actualice la URL. `porUsuario` dice si
+   * el cambio salio de un clic (entrar a una carpeta, migas, "volver"): solo
+   * entonces corresponde apilar una entrada en el historial. */
+  onRutaCambio?: (ruta: string[], porUsuario: boolean) => void;
   /** Avisa que la galeria ya pinto su primera carpeta (con o sin error): es
    * el momento "listo" del centinela para este modulo. Se llama una sola
    * vez, no en cada refresh ni al navegar entre carpetas. */
@@ -266,8 +276,23 @@ export function Gallery({ hidden, onOpen, onUpload, rutaInicial, onRutaCambio, o
    * medias: al apretar atras, `App` pasa la ruta nueva por esta misma via, y
    * el guard la descartaba — la URL volvia al dibujo pero la galeria se
    * quedaba donde estaba.
+   *
+   * Se guarda el ARRAY (por identidad): `App` crea uno nuevo en cada
+   * atras/adelante, y el efecto se vuelve a correr con el mismo cuando solo
+   * cambian sus otras dependencias (o en el doble montaje de StrictMode).
    */
-  const rutaResueltaRef = useRef<string | null>(null);
+  const rutaResueltaRef = useRef<string[] | null>(null);
+  /**
+   * Firma (slugs unidos con "/") de la carpeta que se esta mostrando. La
+   * actualizan `goToStack` (clic) y la resolucion de una ruta. Si el historial
+   * pide justo esta carpeta no hay nada que resolver; si pide otra (incluida
+   * la raiz) se resuelve. Antes se comparaba contra la ULTIMA ruta resuelta,
+   * que no se enteraba de la navegacion por clic: atras hacia la carpeta de
+   * la que se habia salido parecia "ya resuelta" y no pasaba nada.
+   */
+  const firmaCarpetaRef = useRef<string>("");
+  /** El proximo cambio de `folderStack` lo hizo el usuario (ver `goToStack`). */
+  const cambioPorUsuarioRef = useRef(false);
   /** El centinela ya recibio `fase('lista')`/`listo()` para esta sesion: la
    * primera carpeta (con o sin error) alcanza, no hace falta repetirlo en
    * cada refresh ni al navegar a otra carpeta. */
@@ -546,9 +571,14 @@ export function Gallery({ hidden, onOpen, onUpload, rutaInicial, onRutaCambio, o
   );
 
   useEffect(() => {
-    const firma = (rutaInicial || []).join("/");
-    if (rutaResueltaRef.current === firma) return;
-    rutaResueltaRef.current = firma;
+    const ruta = rutaInicial || [];
+    if (rutaResueltaRef.current === ruta) return;
+    const primera = rutaResueltaRef.current === null;
+    rutaResueltaRef.current = ruta;
+    // Atras/adelante hacia la carpeta que ya se ve: nada que resolver (App
+    // tampoco espera aviso, ver `alVolver`). La primera vez siempre se
+    // resuelve: es la carga inicial de la galeria.
+    if (!primera && ruta.join("/") === firmaCarpetaRef.current) return;
     (async () => {
       if (!folderTreeLoadedRef.current) {
         folderTreeCacheRef.current = await fetchAllFolderCache();
@@ -566,7 +596,11 @@ export function Gallery({ hidden, onOpen, onUpload, rutaInicial, onRutaCambio, o
         if (!hija) break; // el resto de la ruta puede ser el archivo
         pila.push({ id: hija.id, name: hija.name });
       }
-      if (pila.length > 1) setFolderStack(pila);
+      // Tambien con la raiz sola: atras hasta "Inicio" tiene que volver ahi.
+      // No es un cambio del usuario, asi que no apila historial.
+      cambioPorUsuarioRef.current = false;
+      firmaCarpetaRef.current = firmaCarpetas(pila.slice(1).map((c) => c.name));
+      setFolderStack(pila);
       const destino = pila[pila.length - 1];
       await loadFolder(destino.id, destino.name);
 
@@ -587,20 +621,28 @@ export function Gallery({ hidden, onOpen, onUpload, rutaInicial, onRutaCambio, o
         // re-subido con contenido distinto mostraba el rasterizado viejo
         // cacheado en este dispositivo.
         await invalidarSiCambio(archivo.id, archivo.modifiedAt);
-        onOpen(archivo.id, archivo.name, null, pila.slice(1).map((c) => c.name));
+        onOpen(archivo.id, archivo.name, null, pila.slice(1).map((c) => c.name), true);
       }
     })();
   }, [loadFolder, rutaInicial, onOpen]);
 
-  // Cada vez que cambia la carpeta, se avisa para que la URL la refleje.
+  // Cada vez que cambia la carpeta, se avisa para que la URL la refleje, y si
+  // el cambio fue un clic (para que App apile historial solo en ese caso).
   useEffect(() => {
-    onRutaCambio?.(folderStack.slice(1).map((c) => c.name));
+    const porUsuario = cambioPorUsuarioRef.current;
+    cambioPorUsuarioRef.current = false;
+    onRutaCambio?.(folderStack.slice(1).map((c) => c.name), porUsuario);
   }, [folderStack, onRutaCambio]);
 
   // La seleccion (archivos y/o carpetas enteras) se mantiene a proposito al
   // navegar entre carpetas, para poder juntar cosas de varios lugares y
   // descargarlas juntas.
+  //
+  // Toda navegacion por clic pasa por aca (navigateInto / navigateToCrumb /
+  // navigateBack): es el unico lugar que marca el cambio como del usuario.
   const goToStack = (nextStack: FolderCrumb[]) => {
+    cambioPorUsuarioRef.current = true;
+    firmaCarpetaRef.current = firmaCarpetas(nextStack.slice(1).map((c) => c.name));
     setFolderStack(nextStack);
     const target = nextStack[nextStack.length - 1];
     loadFolder(target.id, target.name);
