@@ -97,3 +97,58 @@ test("sin codigo en el cuerpo se sigue deduciendo del mensaje (respuesta vieja)"
   const err = errorProxy({ status: 502, range: "bytes=-131072" });
   assert.equal(codigoDeErrorDescarga(err), "UNX-F4005");
 });
+
+// --- WP-Cn: texto para la persona ----------------------------------------
+
+import { explicarFalloDescarga, sospechaArchivoVacio, extensionNoConcepts, MENSAJE_ARCHIVO_VACIO } from "./erroresDescarga.ts";
+
+test("drive-html + 502 (el caso 'prueba w', 0 bytes) sospecha archivo vacio", () => {
+  const err = errorProxy({ status: 502, range: "bytes=-131072", codigo: "UNX-F7001", causa: "drive-html", idFallo: "179cd899" });
+  assert.equal(sospechaArchivoVacio(err), true);
+  const e = explicarFalloDescarga(err, true);
+  assert.equal(e.vacio, true);
+  assert.equal(e.definitivo, true);
+  assert.equal(e.mensaje, MENSAJE_ARCHIVO_VACIO);
+});
+
+test("drive-html sin confirmar el vacio NO dice 'vacio' ni muestra el rango crudo", () => {
+  const err = errorProxy({ status: 502, range: "bytes=-131072", codigo: "UNX-F7001", causa: "drive-html", idFallo: "179cd899" });
+  const e = explicarFalloDescarga(err, false);
+  assert.equal(e.vacio, false);
+  assert.equal(e.definitivo, false);
+  assert.ok(!/Rango bytes/.test(e.mensaje));
+  assert.ok(e.mensaje.includes("179cd899"));
+});
+
+test("otras causas no disparan la comprobacion de vacio", () => {
+  assert.equal(sospechaArchivoVacio(errorProxy({ status: 404, causa: "drive-404" })), false);
+  assert.equal(sospechaArchivoVacio(new Error("Rango bytes=-1 fallo (502)")), false);
+  assert.equal(sospechaArchivoVacio(null), false);
+});
+
+test("drive-404 conserva su texto y es definitivo", () => {
+  const err = errorProxy({ status: 404, range: "bytes=-1", causa: "drive-404" });
+  err.message = "Este dibujo ya no esta en Drive";
+  const e = explicarFalloDescarga(err);
+  assert.equal(e.definitivo, true);
+  assert.equal(e.mensaje, "Este dibujo ya no esta en Drive");
+});
+
+test("un rango crudo sin cuerpo del proxy se traduce y se puede reintentar", () => {
+  const e = explicarFalloDescarga(new Error("Rango bytes=-131072 fallo (502)"));
+  assert.equal(e.definitivo, false);
+  assert.ok(!/Rango/.test(e.mensaje));
+  assert.ok(e.mensaje.includes("502"));
+});
+
+test("un error ajeno al proxy pasa tal cual", () => {
+  assert.equal(explicarFalloDescarga(new Error("Unexpected end of msgpack data")).mensaje, "Unexpected end of msgpack data");
+});
+
+test("extensionNoConcepts: PDFs si, 'prueba w' (sin extension) y .concepts no", () => {
+  assert.equal(extensionNoConcepts("INFORME CUARTO D.pdf"), "PDF");
+  assert.equal(extensionNoConcepts("foto.JPG"), "JPG");
+  assert.equal(extensionNoConcepts("prueba w"), null);
+  assert.equal(extensionNoConcepts("Drawing 6.concepts"), null);
+  assert.equal(extensionNoConcepts("plano.v2 final"), null);
+});

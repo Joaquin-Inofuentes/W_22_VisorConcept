@@ -215,15 +215,53 @@
   margin-bottom: 0;
 }
 
-.folder-card {
-  cursor: pointer;
+/* Carpetas: un renglon de 32 px (icono + nombre), no una tarjeta cuadrada.
+   Antes eran tarjetas de ~168x192, del mismo tamaño que un dibujo, y no se
+   distinguian a simple vista de los archivos (pedido f6aac35a). Ahora una
+   carpeta es un boton delgado y el dibujo es la tarjeta grande. */
+.gallery-folders-grid {
+  gap: 0.5rem;
 }
-.folder-thumb {
+.gallery-card.folder-card {
+  cursor: pointer;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+  height: 32px;
+  min-height: 0;
+  padding: 0 0.5rem;
+  border-radius: 8px;
+  contain-intrinsic-size: auto 32px;
+}
+.folder-card .folder-thumb {
   /* Antes #eaf1ff fijo (celeste claro): un rectangulo brillante suelto en
-     una grilla oscura. `--bg-hover` es el mismo tono neutro "superficie
-     resaltada" que ya usa el resto de la UI en los dos temas. */
-  background: var(--bg-hover);
+     una grilla oscura. El icono ahora va suelto, sin recuadro. */
+  background: none;
   color: var(--primary, #0d6efd);
+  width: 18px;
+  height: 18px;
+  aspect-ratio: auto;
+  flex: none;
+  border-radius: 0;
+}
+.folder-card .gallery-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  line-height: 1;
+}
+/* El selector de la carpeta pasa al extremo derecho del renglon, en linea. */
+.folder-card .gallery-checkbox {
+  position: static;
+  order: 3;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+}
+.folder-card .gallery-checkbox svg {
+  width: 18px;
+  height: 18px;
 }
 
 .gallery-card {

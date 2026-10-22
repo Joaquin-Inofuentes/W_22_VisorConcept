@@ -96,6 +96,26 @@
         </div>
       </div>
     </div>
+    <!-- Reloj de la pantalla de arranque (WP-Cn): mientras el bundle baja y la
+         galeria resuelve la ruta, el texto cambia cada segundo. Antes era un
+         "Cargando dibujos..." fijo y, en un enlace directo a un dibujo, se veia
+         quieto 2-4 s. Se apaga solo cuando React reemplaza #boot. -->
+    <script>
+      (function () {
+        try {
+          var p = document.querySelector("#boot p");
+          if (!p) return;
+          var t0 = Date.now();
+          var base = location.pathname.replace(/\/+$/, "").split("/").length > 2 ? "Abriendo…" : "Cargando dibujos…";
+          p.textContent = base;
+          var id = setInterval(function () {
+            var b = document.querySelector("#boot p");
+            if (!b) return clearInterval(id);
+            b.textContent = base + " " + Math.floor((Date.now() - t0) / 1000) + " s";
+          }, 1000);
+        } catch (e) {}
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

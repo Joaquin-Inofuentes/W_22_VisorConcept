@@ -78,3 +78,87 @@ export function codigoDeErrorDescarga(err: unknown): string {
   }
   return "UNX-F4003";
 }
+
+// --- Lo que se le dice a la persona (WP-Cn) ------------------------------
+//
+// Hasta ahora la tarjeta de la galeria y la pantalla del visor mostraban el
+// mensaje crudo del lector de zip: `Rango bytes=-131072 fallo (502)
+// (referencia 179cd899)`. Nada que una persona pueda leer, y encima escondia
+// que el dibujo "prueba w" mide 0 bytes en Drive (Drive contesta 416 a
+// cualquier rango sobre un archivo vacio; el proxy lo cuenta como `drive-html`
+// + 502). Esto separa el texto para la persona del codigo para el log.
+
+export interface ExplicacionFallo {
+  /** Texto para mostrar. Dice que paso y que hacer. */
+  mensaje: string;
+  /** Reintentar no lo arregla (archivo vacio, id muerto, pedido invalido). */
+  definitivo: boolean;
+  /** El archivo existe en Drive pero mide 0 bytes. */
+  vacio: boolean;
+}
+
+export const MENSAJE_ARCHIVO_VACIO =
+  "Este archivo está vacío en Drive (0 bytes): no hay nada para mostrar. Volvé a guardarlo desde Concepts.";
+
+/** Causas del proxy que justifican gastar un pedido en comprobar si el
+ * archivo esta vacio. `archivo-vacio` es la que mandaria el Worker el dia que
+ * lo distinga solo. */
+export function sospechaArchivoVacio(err: unknown): boolean {
+  const causa = detalleProxy(err)?.causa;
+  return causa === "drive-html" || causa === "archivo-vacio";
+}
+
+/** Texto honesto para un error de apertura/lectura. `vacio` lo decide quien
+ * llama (despues de comprobarlo contra el proxy); aca no hay red. */
+export function explicarFalloDescarga(err: unknown, vacio = false): ExplicacionFallo {
+  const delProxy = detalleProxy(err);
+  if (vacio || delProxy?.causa === "archivo-vacio") {
+    return { mensaje: MENSAJE_ARCHIVO_VACIO, definitivo: true, vacio: true };
+  }
+  const original = err instanceof Error ? err.message : String(err);
+  if (delProxy) {
+    const ref = delProxy.idFallo ? ` (referencia ${delProxy.idFallo})` : "";
+    switch (delProxy.causa) {
+      case "drive-404":
+      case "pedido-invalido":
+        // Ya traen su propio texto, escrito para la persona (zip.ts).
+        return { mensaje: original, definitivo: true, vacio: false };
+      case "drive-sin-rangos":
+      case "timeout":
+        return { mensaje: original, definitivo: false, vacio: false };
+      case "drive-html":
+        return {
+          mensaje: `Drive no entregó el archivo: contestó una página en vez de los datos${ref}. Probá de nuevo en un momento.`,
+          definitivo: false,
+          vacio: false,
+        };
+      default:
+        return {
+          mensaje: `No se pudo leer el archivo desde Drive (HTTP ${delProxy.status})${ref}. Probá de nuevo en un momento.`,
+          definitivo: delProxy.status >= 400 && delProxy.status < 500 && delProxy.status !== 408 && delProxy.status !== 429,
+          vacio: false,
+        };
+    }
+  }
+  const rango = parseRangoFallido(original);
+  if (rango) {
+    return {
+      mensaje: `No se pudo leer el archivo desde Drive (HTTP ${rango.status}). Probá de nuevo en un momento.`,
+      definitivo: false,
+      vacio: false,
+    };
+  }
+  return { mensaje: original, definitivo: false, vacio: false };
+}
+
+/** Extensiones que Drive lista en la carpeta pero que no son dibujos de
+ * Concepts. `prueba w` (sin extension) SI es un dibujo: no se filtra por la
+ * ausencia de `.concepts`, sino por la presencia de una de estas. */
+const RE_NO_CONCEPTS = /\.(pdf|png|jpe?g|gif|webp|heic|docx?|xlsx?|pptx?|dwg|dxf|rvt|ifc|zip|rar|txt|csv|mp4|mov)$/i;
+
+/** `null` si el nombre es (o puede ser) un dibujo de Concepts; si no, la
+ * extension en mayusculas para rotular la tarjeta ("PDF"). */
+export function extensionNoConcepts(nombre: string): string | null {
+  const m = RE_NO_CONCEPTS.exec(nombre.trim());
+  return m ? m[1].toUpperCase() : null;
+}

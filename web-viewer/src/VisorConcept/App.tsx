@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { openConceptsRemote, openConceptsLocal } from './parser';
 import type { Document } from './parser';
-import { SeguidorProgreso, TEXTO_FASE, formatearRestante, formatearMB } from './progreso';
+import { SeguidorProgreso, TEXTO_FASE, TOTAL_PASOS, formatearRestante, formatearMB } from './progreso';
 import type { EstadoProgreso } from './progreso';
 import { Viewer } from './Viewer';
 import type { LayerConfig, ViewerHandle } from './Viewer';
@@ -18,7 +18,8 @@ import {
 import { alternarTema, temaGuardado } from '../theme';
 import type { Tema } from '../theme';
 import { fallo } from '../lib/centinela';
-import { codigoDeErrorDescarga, detalleProxy, parseRangoFallido } from '../lib/erroresDescarga';
+import { codigoDeErrorDescarga, detalleProxy, parseRangoFallido, explicarFalloDescarga, sospechaArchivoVacio } from '../lib/erroresDescarga';
+import { archivoVacioEnDrive } from '../Gallery/driveClient';
 import './App.css';
 
 interface ViewerProps {
@@ -46,8 +47,15 @@ function BarraCarga({ progreso }: { progreso: EstadoProgreso | null }) {
         {progreso.detalle && <span className="viewer-carga-detalle">{progreso.detalle}</span>}
         {pct !== null && <span className="viewer-carga-pct">{Math.round(pct)}%</span>}
       </div>
-      <div className={`viewer-carga-riel ${pct === null ? 'indeterminada' : ''}`}>
-        <div className="viewer-carga-relleno" style={pct === null ? undefined : { width: `${pct}%` }} />
+      <div className="viewer-carga-paso">
+        <span>Paso {progreso.paso} de {TOTAL_PASOS}</span>
+        <span>{progreso.transcurridoS} s</span>
+      </div>
+      {progreso.aviso && <div className="viewer-carga-aviso">{progreso.aviso}</div>}
+      {/* Con los bytes al 100% lo que falta es rasterizar: sin un avance que
+          medir, la barra vuelve a moverse en vez de quedarse llena y quieta. */}
+      <div className={`viewer-carga-riel ${pct === null || pct >= 99.5 ? 'indeterminada' : ''}`}>
+        <div className="viewer-carga-relleno" style={pct === null || pct >= 99.5 ? undefined : { width: `${pct}%` }} />
       </div>
       <div className="viewer-carga-pie">
         <span>
@@ -59,6 +67,22 @@ function BarraCarga({ progreso }: { progreso: EstadoProgreso | null }) {
       </div>
     </div>
   );
+}
+
+/**
+ * Cuenta segundos desde que se monta. El cartel "Trayendo 2 planos…" podia
+ * quedarse 7 s con el mismo texto (pedido 2ee3a077, "queda mucho tiempo
+ * trabado"): con el contador se ve que sigue trabajando. Cambia en cuanto pasa
+ * el segundo (se revisa 10 veces por segundo, solo re-renderiza si cambio).
+ */
+function SegundosEnCurso() {
+  const [s, setS] = useState(0);
+  useEffect(() => {
+    const t0 = performance.now();
+    const id = setInterval(() => setS(Math.floor((performance.now() - t0) / 1000)), 250);
+    return () => clearInterval(id);
+  }, []);
+  return s > 0 ? <span className="viewer-carga-segundos">{s} s</span> : null;
 }
 
 interface LayerMenuProps {
@@ -225,6 +249,8 @@ export function ConceptViewer({ source, onClose }: ViewerProps) {
    * para mostrarlo junto al mensaje: "no un spinner eterno" (F2_MODULOS.md
    * R2-04) tambien significa que la persona tenga algo para mandar. */
   const [errorCodigo, setErrorCodigo] = useState<string | null>(null);
+  /** Reintentar no lo arregla (archivo vacio, id muerto): se oculta el boton. */
+  const [errorDefinitivo, setErrorDefinitivo] = useState(false);
   /** Se incrementa con el boton "Reintentar": esta en las deps del efecto de
    * abajo, asi que fuerza a repetir la apertura sin cambiar `source`. */
   const [intentoReintento, setIntentoReintento] = useState(0);
@@ -557,6 +583,7 @@ export function ConceptViewer({ source, onClose }: ViewerProps) {
     setStats(null);
     setError(null);
     setErrorCodigo(null);
+    setErrorDefinitivo(false);
     if (coberturaTimeoutRef.current) clearTimeout(coberturaTimeoutRef.current);
     coberturaTimeoutRef.current = setTimeout(() => {
       coberturaTimeoutRef.current = null;
@@ -600,6 +627,24 @@ export function ConceptViewer({ source, onClose }: ViewerProps) {
       );
     };
 
+    // Texto para la persona: el crudo (`Rango bytes=-131072 fallo (502)`) no
+    // dice nada, y un archivo de 0 bytes en Drive (`drive-html`) parecia "se
+    // rompio". Se muestra enseguida lo que se sabe y, si el fallo huele a
+    // archivo vacio, se confirma con un pedido de un byte y se corrige.
+    const mostrarError = async (err: unknown, porDefecto: string) => {
+      const previa = explicarFalloDescarga(err, false);
+      setError(previa.mensaje || porDefecto);
+      setErrorDefinitivo(previa.definitivo);
+      if (source.kind === 'remote' && sospechaArchivoVacio(err)) {
+        const vacio = await archivoVacioEnDrive(source.fileId);
+        if (vacio && !cancelado) {
+          const e = explicarFalloDescarga(err, true);
+          setError(e.mensaje);
+          setErrorDefinitivo(e.definitivo);
+        }
+      }
+    };
+
     const seguidor = new SeguidorProgreso((e) => {
       if (!cancelado) setProgreso(e);
     });
@@ -640,7 +685,7 @@ export function ConceptViewer({ source, onClose }: ViewerProps) {
         }
       } catch (err: any) {
         if (!cancelado) {
-          setError(err?.message || 'No se pudo abrir el archivo');
+          void mostrarError(err, 'No se pudo abrir el archivo');
           reportarFalloDescarga(err);
         }
         return;
@@ -680,7 +725,7 @@ export function ConceptViewer({ source, onClose }: ViewerProps) {
 
       if (resDoc.status === 'rejected') {
         if (!cancelado) {
-          setError(resDoc.reason?.message || 'Error al cargar el archivo');
+          void mostrarError(resDoc.reason, 'Error al cargar el archivo');
           reportarFalloDescarga(resDoc.reason);
         }
       } else {
@@ -725,6 +770,7 @@ export function ConceptViewer({ source, onClose }: ViewerProps) {
 
     return () => {
       cancelado = true;
+      seguidor.detener();
       // Cerrar el documento suelta el archivo y las conexiones de rango. Sin
       // esto, abrir y cerrar dibujos pesados va dejando fuentes vivas.
       docCreado?.close();
@@ -892,9 +938,11 @@ export function ConceptViewer({ source, onClose }: ViewerProps) {
             <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>Código: {errorCodigo}</p>
           )}
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-            <button className="btn" onClick={() => setIntentoReintento((n) => n + 1)}>
-              Reintentar
-            </button>
+            {!errorDefinitivo && (
+              <button className="btn" onClick={() => setIntentoReintento((n) => n + 1)}>
+                Reintentar
+              </button>
+            )}
             <button className="btn" onClick={onClose}>Cerrar</button>
           </div>
         </div>
@@ -1153,6 +1201,7 @@ export function ConceptViewer({ source, onClose }: ViewerProps) {
               {refinando.traer > 0
                 ? `Trayendo ${refinando.traer} plano${refinando.traer === 1 ? '' : 's'}…`
                 : `Afinando ${refinando.afinar} plano${refinando.afinar === 1 ? '' : 's'}…`}
+              <SegundosEnCurso />
             </div>
           )}
           {/* La vista previa se mantiene hasta que TODO lo que cae en el

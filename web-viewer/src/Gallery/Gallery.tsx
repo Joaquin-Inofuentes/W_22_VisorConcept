@@ -5,14 +5,15 @@ import {
   FileText, Image as ImageIcon, FolderOpen, Folder, Home, ChevronLeft, ChevronRight,
   Sun, Moon, Trash2, Clock, Search,
 } from "lucide-react";
-import { listDriveFolder } from "./driveClient";
+import { listDriveFolder, archivoVacioEnDrive, sabidoVacio, recordarVacio } from "./driveClient";
 import { conRespaldoDrive } from "./transporte";
 import type { DriveFolderRef, DriveListing } from "./driveClient";
 import {
   fetchCachedThumbnails, upsertThumbnail, fetchAllFolderCache, upsertFolderCache, cacheDeCarpetaVencido,
 } from "./supabaseClient";
 import type { FolderCacheRow, ThumbnailRow } from "./supabaseClient";
-import { thumbnailDeArchivo } from "./thumbnail";
+import { thumbnailDeArchivo, placeholderArchivo, miniaturaDeDrive } from "./thumbnail";
+import { detalleProxy, explicarFalloDescarga, sospechaArchivoVacio, extensionNoConcepts, MENSAJE_ARCHIVO_VACIO } from "../lib/erroresDescarga";
 import { renderDocumentEntry, exportSectionsAsPdf, exportSectionsAsZip } from "./exportRender";
 import type { ExportSection } from "./exportRender";
 import { gatherExportMetadata } from "./exportMetadata";
@@ -40,6 +41,12 @@ interface GalleryItem {
   modifiedAt: string | null;
   hasTime: boolean;
   error?: string;
+  /** El archivo mide 0 bytes en Drive: no hay miniatura posible. */
+  vacio?: boolean;
+  /** Extension de un archivo que no es dibujo (PDF...). Se abre en Drive. */
+  otro?: string;
+  /** Imagen de relleno si la `thumbnail` (una URL de Drive) no carga. */
+  respaldo?: string;
 }
 
 interface FolderCrumb {
@@ -89,6 +96,9 @@ interface GalleryProps {
 
 const EASE_IOS: [number, number, number, number] = [0.16, 1, 0.3, 1];
 const ROOT_CRUMB: FolderCrumb = { id: DRIVE_FOLDER_ID, name: "Inicio" };
+
+/** Texto corto para la tarjeta (el largo va en el aviso al tocarla). */
+const MENSAJE_VACIO_CORTO = "Vacío en Drive (0 bytes)";
 
 function cleanName(name: string) {
   return name.replace(/\s+/g, " ").trim().replace(/\.concepts$/i, "");
@@ -205,7 +215,25 @@ const TarjetaArchivo = memo(function TarjetaArchivo({
           // nombre del archivo ya esta en `.gallery-name` justo debajo; con
           // alt={item.name} un lector de pantalla lo anunciaba dos veces
           // seguidas.
-          <img src={item.thumbnail} alt="" decoding="async" />
+          <img
+            src={item.thumbnail}
+            alt=""
+            decoding="async"
+            referrerPolicy={item.respaldo ? "no-referrer" : undefined}
+            onError={
+              item.respaldo
+                ? (e) => {
+                    // La vista previa de Drive no llego (sin permiso, red): se
+                    // pone el relleno con la extension en vez de un icono roto.
+                    if (e.currentTarget.src !== item.respaldo) e.currentTarget.src = item.respaldo!;
+                  }
+                : undefined
+            }
+          />
+        ) : item.status === "error" && item.vacio ? (
+          // Archivo de 0 bytes: una <img> de relleno (no un hueco) que dice que
+          // esta vacio. No es un fallo de la miniatura, es el archivo.
+          <img src={PLACEHOLDER_VACIO} alt="Archivo vacío" decoding="async" className="gallery-thumb-vacio" />
         ) : item.status === "error" ? (
           <div className="gallery-thumb-error">
             <AlertTriangle size={18} />
@@ -227,6 +255,9 @@ const TarjetaArchivo = memo(function TarjetaArchivo({
     </div>
   );
 });
+
+/** Relleno de las tarjetas de archivos vacios (se arma una sola vez). */
+const PLACEHOLDER_VACIO = placeholderArchivo("0 B", "vacío");
 
 async function runPool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>) {
   let idx = 0;
@@ -387,13 +418,25 @@ export function Gallery({ hidden, onOpen, onUpload, rutaInicial, onRutaCambio, o
         source_modified_at: file.modifiedAt,
       });
     } catch (err: any) {
+      // Un 502 `drive-html` casi siempre es un archivo de 0 bytes (Drive
+      // contesta 416 a cualquier rango): se comprueba con un pedido de un byte
+      // y se dice lo que pasa en vez del `Rango bytes=-131072 fallo (502)`.
+      const vacio = sospechaArchivoVacio(err) && (await archivoVacioEnDrive(file.id));
+      if (vacio) recordarVacio(file.id, file.modifiedAt);
+      const explicacion = explicarFalloDescarga(err, vacio);
       setItems((prev) =>
         prev.map((it) =>
           it.id === file.id
-            ? { ...it, status: "error", error: err?.message || "Error al procesar" }
+            ? {
+                ...it,
+                status: "error",
+                vacio: explicacion.vacio,
+                error: explicacion.vacio ? MENSAJE_VACIO_CORTO : explicacion.mensaje || "Error al procesar",
+              }
             : it
         )
       );
+      if (!detalleProxy(err)) console.error("miniatura:", file.id, err);
     }
   }, []);
 
@@ -495,6 +538,38 @@ export function Gallery({ hidden, onOpen, onUpload, rutaInicial, onRutaCambio, o
 
         const nextItems: GalleryItem[] = listing.files.map((f) => {
           const cached = cache.get(f.id);
+          // Un PDF (o foto) dentro de la carpeta no es un dibujo: no se intenta
+          // abrirlo como .concepts (daba un error por tarjeta). Se usa la vista
+          // previa que da Drive; si no llega, un relleno con la extension.
+          const ext = extensionNoConcepts(f.name);
+          if (ext) {
+            return {
+              id: f.id,
+              name: cleanName(f.name),
+              thumbnail: miniaturaDeDrive(f.id),
+              respaldo: placeholderArchivo(ext),
+              otro: ext,
+              status: "ready" as ItemStatus,
+              fromCache: true,
+              modifiedAt: f.modifiedAt,
+              hasTime: f.hasTime,
+            };
+          }
+          // Ya se comprobo que mide 0 bytes (misma version): no se vuelve a
+          // pedir a Drive en cada visita.
+          if (sabidoVacio(f.id, f.modifiedAt)) {
+            return {
+              id: f.id,
+              name: cleanName(f.name),
+              thumbnail: null,
+              status: "error" as ItemStatus,
+              vacio: true,
+              error: MENSAJE_VACIO_CORTO,
+              fromCache: false,
+              modifiedAt: f.modifiedAt,
+              hasTime: f.hasTime,
+            };
+          }
           // Si la miniatura cacheada se genero para un modifiedAt distinto al
           // actual, el archivo se re-subio con otro contenido y esa miniatura
           // ya no representa lo que hay: se descarta para que se regenere,
@@ -749,6 +824,11 @@ export function Gallery({ hidden, onOpen, onUpload, rutaInicial, onRutaCambio, o
     (item: GalleryItem, el: HTMLElement) => {
       if (selectionMode) {
         toggleSelected({ kind: "file", id: item.id, name: item.name });
+      } else if (item.otro) {
+        // No es un dibujo: el visor no lo abre. Se lo abre donde corresponde.
+        window.open(`https://drive.google.com/file/d/${encodeURIComponent(item.id)}/view`, "_blank", "noopener,noreferrer");
+      } else if (item.vacio) {
+        showToast(MENSAJE_ARCHIVO_VACIO);
       } else {
         handleOpen(item, el.getBoundingClientRect());
       }
@@ -1130,7 +1210,7 @@ export function Gallery({ hidden, onOpen, onUpload, rutaInicial, onRutaCambio, o
                           {checked ? <CheckCircle2 size={20} /> : <Circle size={20} />}
                         </button>
                         <div className="gallery-thumb folder-thumb">
-                          <Folder size={30} />
+                          <Folder size={16} />
                         </div>
                         <div className="gallery-name">{folder.name}</div>
                       </div>

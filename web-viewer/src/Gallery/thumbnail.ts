@@ -253,3 +253,29 @@ export async function renderThumbnailDataUrl(
   small.height = 0;
   return resultado;
 }
+
+// --- Tarjetas sin miniatura posible (WP-Cn) ------------------------------
+
+/**
+ * Imagen de relleno para una tarjeta que no tiene (ni puede tener) miniatura:
+ * un archivo vacio, un PDF cuya vista previa Drive no dio. Es un SVG en data
+ * URL, o sea una `<img>` de verdad (`complete` y `naturalWidth > 0`) en vez de
+ * un hueco: la grilla nunca muestra un recuadro roto. Colores medios, que se
+ * leen sobre el fondo claro y el oscuro.
+ */
+export function placeholderArchivo(rotulo: string, pie: string | null = null): string {
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">` +
+    `<path d="M56 28h56l32 32v100a8 8 0 0 1-8 8H56a8 8 0 0 1-8-8V36a8 8 0 0 1 8-8z" fill="none" stroke="#8a93a6" stroke-width="5" stroke-linejoin="round"/>` +
+    `<path d="M112 28v32h32" fill="none" stroke="#8a93a6" stroke-width="5" stroke-linejoin="round"/>` +
+    `<text x="96" y="118" text-anchor="middle" font-family="system-ui,sans-serif" font-size="30" font-weight="700" fill="#8a93a6">${esc(rotulo)}</text>` +
+    (pie ? `<text x="96" y="146" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" fill="#8a93a6">${esc(pie)}</text>` : "") +
+    `</svg>`;
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+
+/** Vista previa que da Drive para archivos que no son .concepts (PDFs, fotos). */
+export function miniaturaDeDrive(fileId: string): string {
+  return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w256`;
+}

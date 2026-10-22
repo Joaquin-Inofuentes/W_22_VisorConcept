@@ -566,6 +566,25 @@ body {
   100% { transform: translateX(320%); }
 }
 
+/* Paso y segundos: cambia todos los segundos, asi la tarjeta nunca parece
+   congelada aunque la red o el rasterizado tarden. */
+.viewer-carga-paso {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.72rem;
+  color: var(--carga-tenue);
+}
+.viewer-carga-segundos {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+.viewer-carga-aviso {
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 .viewer-carga-pie {
   display: flex;
   justify-content: space-between;

@@ -143,3 +143,66 @@ export async function downloadDriveFile(
   }
   return out.buffer;
 }
+
+// --- Archivos vacios (WP-Cn) ---------------------------------------------
+//
+// Un archivo de 0 bytes en Drive (el "prueba w" de Guada y Flor Re) no se
+// puede leer por rangos: Drive contesta 416 a CUALQUIER `Range`, el proxy lo
+// registra como `drive-html` + 502 y la tarjeta quedaba con el texto crudo
+// del lector de zip. Aca se comprueba, con UN pedido de un byte, si ese es el
+// caso, y se recuerda por archivo+fecha de modificacion para no gastar un
+// pedido (3 s) en cada visita a la carpeta.
+
+const CLAVE_VACIOS = "conceptserializer_vacios";
+const enMemoria = new Map<string, boolean>();
+
+function leerVacios(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(CLAVE_VACIOS) || "{}") as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+/** Ya se sabe que este archivo (en esta version) mide 0 bytes. */
+export function sabidoVacio(fileId: string, modifiedAt: string | null): boolean {
+  return leerVacios()[fileId] === (modifiedAt ?? "");
+}
+
+export function recordarVacio(fileId: string, modifiedAt: string | null): void {
+  try {
+    const v = leerVacios();
+    v[fileId] = modifiedAt ?? "";
+    localStorage.setItem(CLAVE_VACIOS, JSON.stringify(v));
+  } catch {
+    // sin localStorage no se recuerda: se vuelve a comprobar y listo
+  }
+}
+
+/**
+ * ¿Drive dice que este archivo existe pero esta vacio? Pide un byte al proxy:
+ * un archivo con contenido contesta 206; uno vacio, el 502 con
+ * `upstreamStatus: 416`. Nunca rechaza (ante cualquier duda, `false`).
+ */
+export async function archivoVacioEnDrive(fileId: string): Promise<boolean> {
+  const previo = enMemoria.get(fileId);
+  if (previo !== undefined) return previo;
+  let vacio = false;
+  try {
+    const res = await fetchConTimeout(
+      `${FUNCTIONS_URL}/concepts-drive?action=download&fileId=${encodeURIComponent(fileId)}`,
+      { headers: { ...authHeaders(), Range: "bytes=0-0" } },
+      12_000
+    );
+    if (res.ok) {
+      await res.body?.cancel();
+    } else {
+      const cuerpo = await res.json().catch(() => null);
+      vacio = !!cuerpo && (cuerpo.upstreamStatus === 416 || cuerpo.causa === "archivo-vacio");
+    }
+  } catch {
+    vacio = false;
+  }
+  enMemoria.set(fileId, vacio);
+  return vacio;
+}

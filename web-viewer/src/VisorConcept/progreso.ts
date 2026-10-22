@@ -36,7 +36,20 @@ export interface EstadoProgreso {
   velocidadKBs: number | null;
   /** Detalle opcional: "imagen 3 de 19". */
   detalle: string | null;
+  /** Segundos desde que se empezo a abrir. Cambia todos los segundos: la barra
+   * NUNCA se ve quieta aunque la red o el rasterizado tarden. */
+  transcurridoS: number;
+  /** Etapa en curso (1..TOTAL_PASOS) para poder decir "paso 3 de 5". */
+  paso: number;
+  /** Aviso cuando algo tarda mas de lo normal (null si todo va bien). */
+  aviso: string | null;
 }
+
+/** Etapas de una apertura: abrir, bajar indice, procesar, bajar imagenes, dibujar. */
+export const TOTAL_PASOS = 5;
+
+/** A partir de cuantos segundos en la MISMA etapa se avisa que tarda. */
+export const SEGUNDOS_PARA_AVISO = 8;
 
 export class SeguidorProgreso {
   private inicio = performance.now();
@@ -47,9 +60,31 @@ export class SeguidorProgreso {
   private velocidadSuavizada: number | null = null; // bytes por ms
   private ultimoAviso = 0;
   private onCambio: (e: EstadoProgreso) => void;
+  private paso = 1;
+  private ultimoSegundo = 0;
+  private inicioFase = performance.now();
+  private reloj: ReturnType<typeof setInterval> | null = null;
 
   constructor(onCambio: (e: EstadoProgreso) => void) {
     this.onCambio = onCambio;
+    // Una vez por segundo se re-avisa aunque no haya llegado ningun byte ni
+    // cambiado ninguna fase: es el "sigue vivo" de la barra. Sin esto, 3 s de
+    // un rango lento o 10 s de rasterizado se veian como una pantalla trabada.
+    // Se revisa 10 veces por segundo pero solo se avisa cuando el contador de
+    // segundos cambio de verdad: el numero visible cambia en cuanto pasa el
+    // segundo (sin arrastrar el desfase de un intervalo de 1 s) y el visor no
+    // re-renderiza por nada.
+    this.reloj = setInterval(() => {
+      if (this.fase === "listo") return this.detener();
+      const s = Math.floor((performance.now() - this.inicio) / 1000);
+      if (s !== this.ultimoSegundo) this.avisar(true);
+    }, 100);
+  }
+
+  /** Corta el reloj (al cerrar el visor o al reabrir): evita avisos fantasma. */
+  detener() {
+    if (this.reloj) clearInterval(this.reloj);
+    this.reloj = null;
   }
 
   /** Bytes que efectivamente viajaron por la red. */
@@ -67,6 +102,10 @@ export class SeguidorProgreso {
   }
 
   cambiarFase(f: Fase, detalle: string | null = null) {
+    if (f !== this.fase) {
+      this.paso = Math.min(TOTAL_PASOS, this.paso + 1);
+      this.inicioFase = performance.now();
+    }
     this.fase = f;
     this.detalle = detalle;
     this.avisar(true);
@@ -106,14 +145,36 @@ export class SeguidorProgreso {
       segundosRestantes = 0;
     }
 
+    // Los bytes ya llegaron pero todavia no hay imagenes dibujadas: lo que corre
+    // es el rasterizado (un PDF puede tardar 10 s en un telefono). Se dice, en
+    // vez de dejar "Descargando 100%" quieto.
+    let fase = this.fase;
+    let detalle = this.detalle;
+    if (fase === "descargando" && porcentaje !== null && porcentaje >= 99.5) {
+      fase = "dibujando";
+      detalle = detalle ? `preparando planos · ${detalle}` : "preparando planos";
+    }
+    const ahora = performance.now();
+    const enEtapaS = (ahora - this.inicioFase) / 1000;
+    const aviso =
+      this.fase !== "listo" && enEtapaS >= SEGUNDOS_PARA_AVISO
+        ? fase === "abriendo" || fase === "descargando"
+          ? "Drive está tardando en contestar. Sigue trabajando."
+          : "Esto tarda más de lo normal. Sigue trabajando."
+        : null;
+    this.ultimoSegundo = Math.floor((ahora - this.inicio) / 1000);
+
     return {
-      fase: this.fase,
+      fase,
+      transcurridoS: Math.floor((ahora - this.inicio) / 1000),
+      paso: this.fase === "listo" ? TOTAL_PASOS : this.paso,
+      aviso,
       porcentaje,
       bytesRecibidos: this.bytes,
       bytesEsperados: this.esperados,
       segundosRestantes,
       velocidadKBs: v ? +((v * 1000) / 1024).toFixed(0) : null,
-      detalle: this.detalle,
+      detalle,
     };
   }
 
