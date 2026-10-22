@@ -36,8 +36,9 @@ export interface EstadoProgreso {
   velocidadKBs: number | null;
   /** Detalle opcional: "imagen 3 de 19". */
   detalle: string | null;
-  /** Segundos desde que se empezo a abrir. Cambia todos los segundos: la barra
-   * NUNCA se ve quieta aunque la red o el rasterizado tarden. */
+  /** Segundos desde que se empezo a abrir, en pasos de medio segundo (7, 7.5,
+   * 8...). Cambia dos veces por segundo: la barra NUNCA se ve quieta mas de un
+   * segundo aunque la red o el rasterizado tarden. */
   transcurridoS: number;
   /** Etapa en curso (1..TOTAL_PASOS) para poder decir "paso 3 de 5". */
   paso: number;
@@ -70,14 +71,12 @@ export class SeguidorProgreso {
     // Una vez por segundo se re-avisa aunque no haya llegado ningun byte ni
     // cambiado ninguna fase: es el "sigue vivo" de la barra. Sin esto, 3 s de
     // un rango lento o 10 s de rasterizado se veian como una pantalla trabada.
-    // Se revisa 10 veces por segundo pero solo se avisa cuando el contador de
-    // segundos cambio de verdad: el numero visible cambia en cuanto pasa el
-    // segundo (sin arrastrar el desfase de un intervalo de 1 s) y el visor no
-    // re-renderiza por nada.
+    // Se revisa 10 veces por segundo pero solo se avisa cuando el contador
+    // (en medios segundos) cambio de verdad: el numero visible cambia en cuanto
+    // pasa el medio segundo y el visor no re-renderiza por nada.
     this.reloj = setInterval(() => {
       if (this.fase === "listo") return this.detener();
-      const s = Math.floor((performance.now() - this.inicio) / 1000);
-      if (s !== this.ultimoSegundo) this.avisar(true);
+      if (medioSegundo(performance.now() - this.inicio) !== this.ultimoSegundo) this.avisar(true);
     }, 100);
   }
 
@@ -162,11 +161,11 @@ export class SeguidorProgreso {
           ? "Drive está tardando en contestar. Sigue trabajando."
           : "Esto tarda más de lo normal. Sigue trabajando."
         : null;
-    this.ultimoSegundo = Math.floor((ahora - this.inicio) / 1000);
+    this.ultimoSegundo = medioSegundo(ahora - this.inicio);
 
     return {
       fase,
-      transcurridoS: Math.floor((ahora - this.inicio) / 1000),
+      transcurridoS: medioSegundo(ahora - this.inicio),
       paso: this.fase === "listo" ? TOTAL_PASOS : this.paso,
       aviso,
       porcentaje,
@@ -186,6 +185,16 @@ export class SeguidorProgreso {
     this.ultimoAviso = ahora;
     this.onCambio(this.estado());
   }
+}
+
+/** Milisegundos -> segundos en pasos de 0,5 (lo que cambia en pantalla). */
+export function medioSegundo(ms: number): number {
+  return Math.floor(ms / 500) / 2;
+}
+
+/** 7 -> "7 s", 7.5 -> "7,5 s". */
+export function formatearTranscurrido(s: number): string {
+  return `${String(s).replace(".", ",")} s`;
 }
 
 export function formatearRestante(s: number | null): string {

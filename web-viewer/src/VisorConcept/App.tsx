@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { openConceptsRemote, openConceptsLocal } from './parser';
 import type { Document } from './parser';
-import { SeguidorProgreso, TEXTO_FASE, TOTAL_PASOS, formatearRestante, formatearMB } from './progreso';
+import { SeguidorProgreso, TEXTO_FASE, TOTAL_PASOS, formatearRestante, formatearMB, formatearTranscurrido, medioSegundo } from './progreso';
 import type { EstadoProgreso } from './progreso';
 import { Viewer } from './Viewer';
 import type { LayerConfig, ViewerHandle } from './Viewer';
@@ -49,7 +49,7 @@ function BarraCarga({ progreso }: { progreso: EstadoProgreso | null }) {
       </div>
       <div className="viewer-carga-paso">
         <span>Paso {progreso.paso} de {TOTAL_PASOS}</span>
-        <span>{progreso.transcurridoS} s</span>
+        <span>{formatearTranscurrido(progreso.transcurridoS)}</span>
       </div>
       {progreso.aviso && <div className="viewer-carga-aviso">{progreso.aviso}</div>}
       {/* Con los bytes al 100% lo que falta es rasterizar: sin un avance que
@@ -72,17 +72,17 @@ function BarraCarga({ progreso }: { progreso: EstadoProgreso | null }) {
 /**
  * Cuenta segundos desde que se monta. El cartel "Trayendo 2 planos…" podia
  * quedarse 7 s con el mismo texto (pedido 2ee3a077, "queda mucho tiempo
- * trabado"): con el contador se ve que sigue trabajando. Cambia en cuanto pasa
- * el segundo (se revisa 10 veces por segundo, solo re-renderiza si cambio).
+ * trabado"): con el contador se ve que sigue trabajando. Cambia cada medio
+ * segundo (se revisa 10 veces por segundo, solo re-renderiza si cambio).
  */
 function SegundosEnCurso() {
   const [s, setS] = useState(0);
   useEffect(() => {
     const t0 = performance.now();
-    const id = setInterval(() => setS(Math.floor((performance.now() - t0) / 1000)), 250);
+    const id = setInterval(() => setS(medioSegundo(performance.now() - t0)), 250);
     return () => clearInterval(id);
   }, []);
-  return s > 0 ? <span className="viewer-carga-segundos">{s} s</span> : null;
+  return s > 0 ? <span className="viewer-carga-segundos">{formatearTranscurrido(s)}</span> : null;
 }
 
 interface LayerMenuProps {
@@ -633,16 +633,20 @@ export function ConceptViewer({ source, onClose }: ViewerProps) {
     // archivo vacio, se confirma con un pedido de un byte y se corrige.
     const mostrarError = async (err: unknown, porDefecto: string) => {
       const previa = explicarFalloDescarga(err, false);
+      if (source.kind === 'remote' && sospechaArchivoVacio(err)) {
+        // Un segundo (un pedido de 1 byte) hasta saber si esta vacio: mientras
+        // tanto no se afirma nada que despues haya que desmentir.
+        setError('Comprobando qué pasó con el archivo…');
+        setErrorDefinitivo(true);
+        const vacio = await archivoVacioEnDrive(source.fileId);
+        if (cancelado) return;
+        const e = vacio ? explicarFalloDescarga(err, true) : previa;
+        setError(e.mensaje || porDefecto);
+        setErrorDefinitivo(e.definitivo);
+        return;
+      }
       setError(previa.mensaje || porDefecto);
       setErrorDefinitivo(previa.definitivo);
-      if (source.kind === 'remote' && sospechaArchivoVacio(err)) {
-        const vacio = await archivoVacioEnDrive(source.fileId);
-        if (vacio && !cancelado) {
-          const e = explicarFalloDescarga(err, true);
-          setError(e.mensaje);
-          setErrorDefinitivo(e.definitivo);
-        }
-      }
     };
 
     const seguidor = new SeguidorProgreso((e) => {

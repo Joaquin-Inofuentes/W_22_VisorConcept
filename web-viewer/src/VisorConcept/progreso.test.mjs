@@ -2,7 +2,7 @@
 // El reloj del seguidor y los textos de "no estas trabado" (WP-Cn, pedido 2ee3a077).
 import test from "node:test";
 import assert from "node:assert/strict";
-import { SeguidorProgreso, TOTAL_PASOS, SEGUNDOS_PARA_AVISO } from "./progreso.ts";
+import { SeguidorProgreso, TOTAL_PASOS, SEGUNDOS_PARA_AVISO, medioSegundo, formatearTranscurrido } from "./progreso.ts";
 
 /** performance.now() controlable: la clase lo lee tanto en el reloj como al calcular. */
 function conReloj(fn) {
@@ -35,6 +35,15 @@ test("transcurridoS cuenta segundos reales y paso avanza con cada fase", () => {
       s.detener();
     }
   });
+});
+
+test("el contador va en medios segundos y se formatea con coma", () => {
+  assert.equal(medioSegundo(0), 0);
+  assert.equal(medioSegundo(499), 0);
+  assert.equal(medioSegundo(500), 0.5);
+  assert.equal(medioSegundo(7600), 7.5);
+  assert.equal(formatearTranscurrido(7), "7 s");
+  assert.equal(formatearTranscurrido(7.5), "7,5 s");
 });
 
 test("misma fase repetida no cuenta como paso nuevo", () => {
@@ -92,7 +101,7 @@ test("el reloj avisa al pasar el segundo aunque no llegue ningun byte", async ()
     s.cambiarFase("abriendo");
     const antes = avisos.length;
     await new Promise((r) => setTimeout(r, 1300));
-    assert.ok(avisos.length > antes, "debio avisar al cumplirse el primer segundo");
+    assert.ok(avisos.length - antes >= 2, "debio avisar al menos 2 veces (medios segundos) en 1,3 s");
     assert.ok(avisos.at(-1) >= 1);
   } finally {
     s.detener();
