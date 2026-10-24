@@ -1,4 +1,4 @@
-// Compatibilidad Vercel (req, res estilo Node) -> Cloudflare Worker (fetch).
+// Compatibilidad (req, res estilo Node) -> Cloudflare Worker (fetch).
 // Permite correr SIN reescribir los api/*.js del repo original.
 function consulta(url) {
   const q = {};
@@ -15,8 +15,6 @@ async function armarReq(request, url) {
   if (!headers["x-forwarded-for"]) headers["x-forwarded-for"] = ip;
   if (!headers["x-real-ip"]) headers["x-real-ip"] = ip;
   const cf = request.cf || {};
-  if (cf.country) headers["x-vercel-ip-country"] = cf.country;
-  if (cf.city) headers["x-vercel-ip-city"] = cf.city;
   let body;
   if (request.method !== "GET" && request.method !== "HEAD") {
     const ct = headers["content-type"] || "";

@@ -31,7 +31,7 @@ const MIME = {
   ".png": "image/png",
 };
 
-// Gzip como haria Vercel/cualquier CDN: medir la red con JS sin comprimir
+// Gzip como haria Cloudflare/cualquier CDN: medir la red con JS sin comprimir
 // triplicaria el tiempo de descarga respecto de produccion real.
 const gzCache = new Map();
 const server = createServer(async (req, res) => {

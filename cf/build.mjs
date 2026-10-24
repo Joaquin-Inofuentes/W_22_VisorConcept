@@ -1,7 +1,7 @@
-// cf/build.mjs -- arma el Worker de Cloudflare de ESTE repo, sin tocar nada de Vercel.
+// cf/build.mjs -- arma el Worker de Cloudflare de ESTE repo.
 //   node cf/build.mjs            (Workers Builds: "Build command")
 //   npx wrangler deploy -c cf/wrangler.jsonc   (Workers Builds: "Deploy command")
-// Lee ../vercel.json y ../api/*.js; escribe cf/.dist/{public,worker.js}. Sólo Node (corre en Linux y en Windows).
+// Lee cf/rutas.json y ../api/*.js; escribe cf/.dist/{public,worker.js}. Sólo Node (corre en Linux y en Windows).
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 
 const CF = dirname(fileURLToPath(import.meta.url));
 const cfg = JSON.parse(readFileSync(join(CF, "config.json"), "utf8")); // { slug, servicios: [...], bucket?, raiz?, instalar?, subirGrandes? }
-const REPO = resolve(CF, "..", cfg.raiz || "."); // raiz: subcarpeta de la app (como el Root Directory de Vercel)
+const REPO = resolve(CF, "..", cfg.raiz || "."); // raiz: subcarpeta de la app
 const DIST = join(CF, ".dist");
 const PUB = join(DIST, "public");
-const vj = existsSync(join(REPO, "vercel.json")) ? JSON.parse(readFileSync(join(REPO, "vercel.json"), "utf8")) : {};
+const vj = existsSync(join(CF, "rutas.json")) ? JSON.parse(readFileSync(join(CF, "rutas.json"), "utf8")) : {}; // { cleanUrls, headers, redirects, rewrites, buildCommand, outputDirectory }
 const avisos = [];
 const J = (x) => JSON.stringify(x);
 
@@ -20,7 +20,7 @@ rmSync(DIST, { recursive: true, force: true });
 mkdirSync(PUB, { recursive: true });
 
 // ---------- 1. sitio estático (build propio del repo si lo tiene) ----------
-const EXCLUIR = new Set(["node_modules", ".git", ".vercel", "0_MAPA_IA~", "api", "tests", "tests-e2e", "_WORKTREES", ".next", "test-results", "playwright-report", "cf", ".wrangler", "docs"]);
+const EXCLUIR = new Set(["node_modules", ".git", "0_MAPA_IA~", "api", "tests", "tests-e2e", "_WORKTREES", ".next", "test-results", "playwright-report", "cf", ".wrangler", "docs"]);
 const EXCLUIR_ARCH = /^(\.env.*|desktop\.ini|\.carpeta\.ico|\.gitignore|package-lock\.json)$/;
 const copiar = (de, a, excluir = EXCLUIR) => {
   mkdirSync(a, { recursive: true });
@@ -30,7 +30,7 @@ const copiar = (de, a, excluir = EXCLUIR) => {
   }
 };
 const sub = vj.outputDirectory && vj.outputDirectory !== "." ? vj.outputDirectory : "";
-const entorno = { ...process.env, VERCEL: "1" };
+const entorno = { ...process.env };
 if (cfg.instalar && !existsSync(join(REPO, "node_modules"))) { const i = spawnSync(cfg.instalar, { cwd: REPO, shell: true, stdio: "inherit" }); if (i.status !== 0) { console.error("instalar fallo"); process.exit(1); } }
 if (vj.buildCommand) {
   const bb = spawnSync(vj.buildCommand, { cwd: REPO, shell: true, stdio: "inherit", env: entorno });
@@ -47,7 +47,7 @@ try {
   if (sha || fecha) writeFileSync(join(PUB, "commit.json"), JSON.stringify({ sha, fecha }));
 } catch {}
 
-// ---------- 2. vercel.json -> _headers / _redirects / reglas del Worker ----------
+// ---------- 2. cf/rutas.json -> _headers / _redirects / reglas del Worker ----------
 function expandir(p) {
   p = p.replace(/\\\./g, ".").replace(/\\-/g, "-");
   if (p.includes("(?")) return null;
@@ -78,7 +78,7 @@ writeFileSync(join(PUB, "_headers"), reglas.join("\n\n") + "\n");
 const reds = (vj.redirects || []).map((x) => `${expandir(x.source)?.[0] ?? x.source} ${x.destination} ${x.permanent ? 308 : 307}`);
 if (reds.length) writeFileSync(join(PUB, "_redirects"), reds.join("\n") + "\n");
 const REWRITES = (vj.rewrites || []).map((x) => [`^${x.source}$`, x.destination]);
-if (vj.routes) avisos.push('vercel.json tiene "routes": revisar a mano');
+if (vj.routes) avisos.push('rutas.json tiene "routes": revisar a mano');
 
 // ---------- 3. archivos que no entran en Static Assets (25 MiB) -> R2 ----------
 const LIMITE = 25 * 1024 * 1024 - 1024;
@@ -101,7 +101,7 @@ for (const g of GRANDES) {
   avisos.push(`archivo grande a R2: ${g}`);
 }
 
-// ---------- 4. api/*.js -> Worker (las funciones de Vercel corren tal cual, vía cf/shim.js) ----------
+// ---------- 4. api/*.js -> Worker (las funciones api/*.js estilo Node (req, res) corren tal cual, vía cf/shim.js) ----------
 function recorrer(d, base = d) {
   if (!existsSync(d)) return [];
   return readdirSync(d, { withFileTypes: true }).flatMap((e) => {

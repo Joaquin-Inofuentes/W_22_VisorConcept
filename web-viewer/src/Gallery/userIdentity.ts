@@ -22,7 +22,7 @@ export function getUserName(): string | null {
   } catch {
     // sin document/cookies: seguimos con el query param.
   }
-  // Si todavía no hay nombre guardado, el portal (unx-portal.vercel.app)
+  // Si todavía no hay nombre guardado, el portal (babelbim.com)
   // puede inyectar el que la persona ya tipeó ahí, vía ?unx_name=, para no
   // pedirlo de nuevo acá. Se persiste igual que si viniera del NamePrompt.
   try {

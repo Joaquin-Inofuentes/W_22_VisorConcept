@@ -10,7 +10,7 @@ import puppeteer from "puppeteer";
 const CACHE_DIR = path.resolve(".cache/concepts");
 const OUT = path.resolve(".cache/fotos");
 await mkdir(OUT, { recursive: true });
-const BASE = "https://unx-concept.vercel.app";
+const BASE = "https://babelbim.com/concept";
 
 const manifest = JSON.parse(await readFile(path.join(CACHE_DIR, "manifest.json"), "utf8"));
 const disponibles = manifest.files.filter((f) => f.size && f.localPath).sort((a, b) => b.size - a.size);

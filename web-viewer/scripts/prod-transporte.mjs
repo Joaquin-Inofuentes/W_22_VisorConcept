@@ -3,7 +3,7 @@
 // guardo. Deja pasar el INSERT de visor_eventos a proposito (valida las
 // columnas nuevas): borrar la fila despues con el sesion_id que imprime.
 //
-//   node scripts/prod-transporte.mjs "<url con ?demo (y _vercel_share si hace falta)>" [veces=1]
+//   node scripts/prod-transporte.mjs "<url con ?demo>" [veces=1]
 
 import puppeteer from "puppeteer";
 

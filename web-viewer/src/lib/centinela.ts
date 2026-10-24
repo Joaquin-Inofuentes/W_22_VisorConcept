@@ -4,7 +4,7 @@
 // se evalue: no se copia al repo (Concept no es una PWA con shell cacheado).
 // Pero puede no estar -- kill switch, un shell viejo servido por un service
 // worker de otro modulo, o esta misma app abierta directo en su dominio de
-// Vercel sin pasar por babelbim.com -- asi que TODA llamada es un no-op
+// Cloudflare sin pasar por babelbim.com -- asi que TODA llamada es un no-op
 // silencioso si `window.UnxCentinela` no existe o no tiene el metodo. Import
 // SIEMPRE de aca, nunca de `window.UnxCentinela` directo (R2-04, F2_MODULOS.md).
 

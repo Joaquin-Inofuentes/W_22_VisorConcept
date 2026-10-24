@@ -1,6 +1,6 @@
 import puppeteer from "puppeteer";
 const FILE = process.argv[2];
-const BASE = process.env.BASE_URL || "https://unx-concept.vercel.app";
+const BASE = process.env.BASE_URL || "https://babelbim.com/concept";
 const browser = await puppeteer.launch({ headless: "new", args: ["--no-sandbox"] });
 const page = await browser.newPage();
 page.setDefaultTimeout(120000);

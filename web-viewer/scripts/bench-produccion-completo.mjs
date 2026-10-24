@@ -1,4 +1,4 @@
-// Test integral contra PRODUCCION (unx-concept.vercel.app) sobre una URL
+// Test integral contra PRODUCCION (babelbim.com/concept) sobre una URL
 // real de dibujo:
 //   1. Zoom + pan repetidos sobre el lienzo -> NO debe recargar lo ya cargado
 //   2. Abrir la foto desde la galeria -> pan, zoom, rotar, descargar (PDF/JPG/PNG)
@@ -13,7 +13,7 @@ import path from "node:path";
 
 const URL_DIBUJO =
   process.argv[2] ||
-  "https://unx-concept.vercel.app/guada-y-flor-re/concepts/acuna-de-figueroa-1587/af-calculo-de-anclajes-1er-y-2do";
+  "https://babelbim.com/concept/guada-y-flor-re/concepts/acuna-de-figueroa-1587/af-calculo-de-anclajes-1er-y-2do";
 const CACHE_DIR = path.resolve(".cache/concepts");
 
 console.log(`URL: ${URL_DIBUJO}\n`);

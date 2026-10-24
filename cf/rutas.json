@@ -1,5 +1,4 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
       "source": "/concept/assets/(.*)",
@@ -62,7 +61,6 @@
       ]
     }
   ],
-  "buildCommand": "npm run build && node -e \"require('fs').writeFileSync('dist/version.txt', process.env.VERCEL_GIT_COMMIT_SHA || process.env.WORKERS_CI_COMMIT_SHA || 'local')\"",
-  "outputDirectory": "dist",
-  "installCommand": "npm install"
+  "buildCommand": "npm run build && node -e \"require('fs').writeFileSync('dist/version.txt', process.env.WORKERS_CI_COMMIT_SHA || 'local')\"",
+  "outputDirectory": "dist"
 }

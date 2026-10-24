@@ -602,7 +602,7 @@ En la galería es peor: `exportProgress` se re-renderiza **desde el mismo compon
 
 ### 9.1 `puppeteer` está en `dependencies` — 🔴 arreglo de 10 segundos
 
-`package.json:21`. Vercel instala Puppeteer y **descarga Chromium (cientos de MB) en cada build**. Es herramental de test puro (los ~100 scripts de `scripts/`) y no entra en el bundle. Mover a `devDependencies`.
+`package.json:21`. Cloudflare instala Puppeteer y **descarga Chromium (cientos de MB) en cada build**. Es herramental de test puro (los ~100 scripts de `scripts/`) y no entra en el bundle. Mover a `devDependencies`.
 
 ### 9.2 Sin `build.target` en Vite — 🔴 riesgo de pantalla en blanco
 
@@ -618,7 +618,7 @@ Si algún WebView del parque real no soporta la sintaxis emitida, la app falla c
 
 **Implementación:** verificar si el camino de `rasterizarEnMain` (`renderCore.ts:488-558`) justifica tener pdf.js también en el hilo principal. Si es solo un fallback, cargarlo con `import()` dinámico bajo demanda: se ahorran 427 KB de descarga y parseo en el 95 % de las sesiones.
 
-### 9.4 `vercel.json` sin headers — 🟠
+### 9.4 `rutas.json` sin headers — 🟠
 
 Solo tiene `rewrites`. El rewrite SPA está bien resuelto (la negación de `assets/` hace que un asset faltante dé 404 real en vez de HTML). Falta:
 - `Cache-Control: public, max-age=31536000, immutable` para `/assets/*` — los archivos ya vienen con hash en el nombre, y es lo que más rinde en 3G.

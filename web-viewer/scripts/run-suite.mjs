@@ -11,7 +11,7 @@ import { spawn } from "node:child_process";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
-const BASE_URL = process.env.BASE_URL || "https://unx-concept.vercel.app";
+const BASE_URL = process.env.BASE_URL || "https://babelbim.com/concept";
 const OUT_DIR = path.resolve(".cache");
 const INFORME = path.join(OUT_DIR, "informe-tests.md");
 const SOLO = (process.env.SOLO || "").split(",").filter(Boolean);
