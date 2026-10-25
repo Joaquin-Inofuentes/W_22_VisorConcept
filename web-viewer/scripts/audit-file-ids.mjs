@@ -1,6 +1,6 @@
 // Audita cada file_id de drive_folder_cache pegandole al proxy con Range de 1
 // byte (no descarga el archivo completo). Reporta cuales fallan.
-const SUPABASE_URL = "https://babelbim-worker.datafiles.workers.dev/v1/bim";
+const BBW_URL = "https://babelbim-worker.datafiles.workers.dev/v1/bim";
 const ANON =
   "bbw_pub_23ac1e410efd14afd380458d3e78959c2bf22b0b87b1172d";
 
@@ -8,7 +8,7 @@ const files = JSON.parse(process.argv[2] ? await (await import("node:fs")).promi
 
 const results = [];
 for (const f of files) {
-  const url = `${SUPABASE_URL}/functions/v1/concepts-drive?action=download&fileId=${encodeURIComponent(f.file_id)}&range=0-0`;
+  const url = `${BBW_URL}/functions/v1/concepts-drive?action=download&fileId=${encodeURIComponent(f.file_id)}&range=0-0`;
   try {
     const res = await fetch(url, {
       headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },

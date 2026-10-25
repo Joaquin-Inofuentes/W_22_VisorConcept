@@ -1,8 +1,8 @@
-// Config publica del viewer. La anon key de Supabase esta pensada para
-// usarse en el cliente (el acceso real se controla con RLS en la tabla).
-export const SUPABASE_URL = "https://babelbim-worker.datafiles.workers.dev/v1/bim"; // BabelBimWorker (Cloudflare), no Supabase directo
-export const SUPABASE_ANON_KEY = "bbw_pub_23ac1e410efd14afd380458d3e78959c2bf22b0b87b1172d"; // token público del cliente concept en el Worker
-export const FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
+// Config publica del viewer. El token publico del cliente `concept` esta pensado para
+// usarse en el cliente (el BabelBimWorker decide por cliente que rutas y tablas puede tocar).
+export const BBW_URL = "https://babelbim-worker.datafiles.workers.dev/v1/bim"; // BabelBimWorker (Cloudflare), no otro proveedor
+export const BBW_TOKEN = "bbw_pub_23ac1e410efd14afd380458d3e78959c2bf22b0b87b1172d"; // token público del cliente concept en el Worker
+export const FUNCTIONS_URL = `${BBW_URL}/functions/v1`;
 
 // Carpeta publica de Google Drive con archivos .concepts de ejemplo.
 export const DRIVE_FOLDER_ID = "1lAlcv9-g6HmWVKkYMcrQQWBD3ew15i5Q";

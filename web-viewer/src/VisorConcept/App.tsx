@@ -598,7 +598,7 @@ export function ConceptViewer({ source, onClose }: ViewerProps) {
     // codigo del catalogo que corresponda. Desde R3-01 el codigo lo pone la
     // propia Edge Function (UNX-F4005 para un rango, UNX-F7001 para el resto
     // de sus fallos) y viene con `causa` y el `id` de su linea en los logs de
-    // Supabase: sin ese id, una fila de `unx_fallos` y el log del backend no
+    // el servidor: sin ese id, una fila de `unx_fallos` y el log del backend no
     // se pueden cruzar. `fileId` solo si el origen es remoto: un archivo
     // local no tiene nada que ver con el proxy.
     // Objeto y no variable: se asigna dentro de una funcion y TS la daria por `null`.

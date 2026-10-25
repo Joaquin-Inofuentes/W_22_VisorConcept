@@ -5,7 +5,7 @@ import { NamePrompt } from './Gallery/NamePrompt';
 import { logCerrar } from './Gallery/analytics';
 import { getUserName, setUserName } from './Gallery/userIdentity';
 import { registrarAbierto } from './Gallery/recientes';
-import { ubicarArchivo } from './Gallery/supabaseClient';
+import { ubicarArchivo } from './Gallery/datosClient';
 import { DEMO_FILE_ID, DEMO_FILE_NAME } from './config';
 import { applyTierFromUrl } from './device';
 import { temaGuardado, aplicarTema } from './theme';

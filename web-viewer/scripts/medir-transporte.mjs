@@ -11,8 +11,8 @@
 import { readFileSync } from "node:fs";
 
 const cfg = readFileSync(new URL("../src/config.ts", import.meta.url), "utf8");
-const ANON = /SUPABASE_ANON_KEY =\s*"([^"]+)"/.exec(cfg)[1];
-const SB = /SUPABASE_URL = "([^"]+)"/.exec(cfg)[1];
+const ANON = /BBW_TOKEN =\s*"([^"]+)"/.exec(cfg)[1];
+const SB = /BBW_URL = "([^"]+)"/.exec(cfg)[1];
 const DEMO_ID = /DEMO_FILE_ID = "([^"]+)"/.exec(cfg)[1];
 const VECES = Number(process.argv[2] ?? 3);
 const RUTA = process.argv[3] ?? "Guada y Flor Re/Concepts/ROOSEVELT 4464/3er piso/RO 3er y 4to..concepts";

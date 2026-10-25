@@ -1,4 +1,4 @@
-import { FUNCTIONS_URL, SUPABASE_ANON_KEY } from "../config";
+import { FUNCTIONS_URL, BBW_TOKEN } from "../config";
 
 export interface DriveFolderRef {
   id: string;
@@ -19,8 +19,8 @@ export interface DriveListing {
 
 function authHeaders(): Record<string, string> {
   return {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    apikey: BBW_TOKEN,
+    Authorization: `Bearer ${BBW_TOKEN}`,
   };
 }
 

@@ -32,7 +32,7 @@
   // única que sirve para sendBeacon, que sólo sabe mandar `text/plain`.
   var ENDPOINT = BASE + "registrar_acceso";
   var ENDPOINT_BEACON = BASE + "acceso";
-  var ANON = "bbw_pub_cffdcb84a39e2c154bd36a763ac426f2434f3ed127662be1";   // token público (cliente portal) del Worker; no es la anon key de Supabase
+  var ANON = "bbw_pub_cffdcb84a39e2c154bd36a763ac426f2434f3ed127662be1";   // token público (cliente portal) del Worker; no es la anon key del servidor
   // Token público a propósito: sólo habilita a INSERTAR un ingreso o un egreso.
   // La tabla tiene RLS sin policies — con esta clave no se lee ni una fila.
   var TOKEN = "2WZrtvhggP6JOQopdsQTLLFA7tMISBYY";

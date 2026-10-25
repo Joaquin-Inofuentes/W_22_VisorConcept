@@ -8,8 +8,8 @@
 //
 // Requisitos corriendo antes (ver docs en el commit):
 //   node scripts/nodo-falso.mjs
-//   SUPABASE_URL=http://127.0.0.1:4181 SUPABASE_ANON_KEY=x UNX_NODO_TOKEN=secreto-de-prueba \
-//     deno run --no-check --allow-net --allow-env supabase/functions/concepts-nodo/index.ts
+//   BBW_URL=http://127.0.0.1:4181 BBW_TOKEN=x UNX_NODO_TOKEN=secreto-de-prueba \
+//     (la Edge Function concepts-nodo ya no vive en este repo: ahora es M_04_BabelBimWorker/src/edge/concepts-nodo.js; fuente vieja en el tag archivo/edge-supabase-concept-2026-10-24)
 //   npm run dev   (puerto 5173)
 //
 //   node scripts/e2e-transporte.mjs [escenario ...]

@@ -8,7 +8,7 @@
  * El slug se arma con el NOMBRE de cada carpeta/archivo, no con los ids de
  * Drive: un link tiene que decir a que plano apunta con solo mirarlo. La
  * contra es que hay que resolver el nombre contra el arbol de Drive al
- * entrar, pero ese arbol ya esta cacheado en Supabase y se trae entero en una
+ * entrar, pero ese arbol ya esta cacheado en el servidor y se trae entero en una
  * sola consulta, asi que resolver es instantaneo.
  *
  * Se usan segmentos separados por "/" (no un solo segmento con guiones) para

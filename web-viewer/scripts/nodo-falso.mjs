@@ -13,8 +13,8 @@
 //  - Falla a pedido (`/__ctl?modo=...`) para probar el respaldo a Drive.
 //
 // Tambien levanta una "flota" falsa en otro puerto que contesta la RPC
-// `unx_estado_flota` de Supabase apuntando a este nodo, asi la Edge Function
-// corre local sin Supabase.
+// `unx_estado_flota` del servidor apuntando a este nodo, asi la Edge Function
+// corre local sin el servidor.
 //
 //   node scripts/nodo-falso.mjs [--puerto 4180] [--flota 4181] [--raiz C:\ARQ]
 //        [--secreto secreto-de-prueba] [--origenes http://localhost:5173,...]

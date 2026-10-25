@@ -1,5 +1,5 @@
 // Cableado real del "sistema de llamados" (la logica vive en transporteCore.ts,
-// que no toca la red). Aca se conecta con Supabase, con el tunel y con la URL.
+// que no toca la red). Aca se conecta con el servidor, con el tunel y con la URL.
 //
 // Uso (los tres lugares que leen un dibujo: abrirlo en el visor, la miniatura
 // de la galeria y el exportar):
@@ -17,9 +17,9 @@
 // Solo en desarrollo:
 //   ?nodoApi=<url>      base de la funcion `concepts-nodo` (una local, por ej.)
 
-import { FUNCTIONS_URL, SUPABASE_ANON_KEY } from "../config";
+import { FUNCTIONS_URL, BBW_TOKEN } from "../config";
 import { driveAuthHeaders, driveFileUrl } from "./driveClient";
-import { fetchAllFolderCache } from "./supabaseClient";
+import { fetchAllFolderCache } from "./datosClient";
 import type { FuenteDirecta } from "../VisorConcept/zip";
 import {
   crearTransporte,
@@ -52,7 +52,7 @@ const dependencias: Dependencias = {
   async llamarFuncion<T>(accion: string, params: Record<string, string>, topeMs: number): Promise<T> {
     const q = new URLSearchParams({ action: accion, ...params });
     const res = await fetch(`${baseFuncion()}?${q}`, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      headers: { apikey: BBW_TOKEN, Authorization: `Bearer ${BBW_TOKEN}` },
       signal: AbortSignal.timeout(topeMs),
     });
     // Un 400 trae `{ok:false, motivo}` (ruta invalida): es una respuesta, no una falla de red.
@@ -92,7 +92,7 @@ if (typeof window !== "undefined") {
 export const iniciarSondeo = transporte.iniciarSondeo;
 export const estadoDelTransporte = transporte.estadoActual;
 
-// El arbol de carpetas ya viene cacheado en Supabase (la galeria lo usa para
+// El arbol de carpetas ya viene cacheado en el servidor (la galeria lo usa para
 // navegar). Se pide una vez y se reusa un rato: abrir 20 miniaturas no debe
 // bajar 20 veces el arbol entero.
 const VIGENCIA_ARBOL_MS = 5 * 60_000;

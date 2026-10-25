@@ -3,7 +3,7 @@
  *
  * Guarda SOLO la ruta y el id (unos cientos de bytes por entrada), nunca la
  * miniatura ni los bytes del archivo: la miniatura ya vive en el cache de
- * Supabase y el archivo no se guarda en ningun lado. Asi la lista de
+ * el servidor y el archivo no se guarda en ningun lado. Asi la lista de
  * recientes es gratis en memoria y en disco.
  *
  * Comparte la base de datos con el cache de rasterizados pero en otro store,

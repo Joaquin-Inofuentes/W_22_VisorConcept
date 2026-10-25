@@ -50,11 +50,7 @@ SW). El del gateway (scope "/") se entera del cambio vía contenido.
 
 ## `concepts-drive`: el contrato de error (R3-01)
 
-La Edge Function vive en `web-viewer/supabase/functions/concepts-drive/`
-(`index.ts` + `errores.ts` + `rangos.ts`) y **no se autodespliega**: después de
-editarla hay que redesplegar los TRES archivos con `deploy_edge_function`
-(proyecto `kuhcxzusnrttkywgalgk`, `verify_jwt: true`, entrypoint
-`concepts-drive/index.ts`). Tests: `deno test` en esa carpeta.
+La función `concepts-drive` vive en `M_04_BabelBimWorker/src/edge/concepts-drive.js` (se despliega con el BabelBimWorker, ruta `/v1/bim/functions/v1/concepts-drive`). La fuente Deno original (index.ts + errores.ts + rangos.ts y sus tests) se retiró de este repo el 2026-10-24: está en el tag `archivo/edge-supabase-concept-2026-10-24`.
 
 Todo fallo sale con `{ok:false, codigo, causa, detalle, upstreamStatus,
 fileId, range, id}` y el MISMO objeto va a `console.error`: el `id` es lo

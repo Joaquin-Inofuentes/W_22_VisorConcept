@@ -1,14 +1,14 @@
 /**
- * Acceso a Supabase por REST directo (PostgREST), sin el SDK.
+ * Acceso al servidor por REST directo (PostgREST), sin el SDK.
  *
- * El SDK `@supabase/supabase-js` pesa ~33 KB gzip y trae realtime, auth y
+ * El SDK de un proveedor tipo Supabase pesaria ~33 KB gzip y trae realtime, auth y
  * storage — nada de lo cual se usa aca: los cuatro accesos son un select con
  * filtro `in`, dos upserts y un insert, o sea llamadas HTTP con dos headers.
  * En una conexion 3G de un telefono viejo, esos 33 KB son medio segundo de
  * arranque regalado.
  */
 
-import { SUPABASE_URL, SUPABASE_ANON_KEY, THUMBNAIL_SIZE } from "../config";
+import { BBW_URL, BBW_TOKEN, THUMBNAIL_SIZE } from "../config";
 import type { DriveFolderRef, DriveFile } from "./driveClient";
 import { cacheDeCarpetaVencido, TTL_CACHE_CARPETA_MS } from "./cacheFrescura";
 
@@ -18,12 +18,12 @@ import { cacheDeCarpetaVencido, TTL_CACHE_CARPETA_MS } from "./cacheFrescura";
 // `node --test` sin arrastrar `../config` (ver el comentario de ese archivo).
 export { cacheDeCarpetaVencido, TTL_CACHE_CARPETA_MS };
 
-const REST = `${SUPABASE_URL}/rest/v1`;
+const REST = `${BBW_URL}/rest/v1`;
 
 function headers(extra: Record<string, string> = {}): Record<string, string> {
   return {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    apikey: BBW_TOKEN,
+    Authorization: `Bearer ${BBW_TOKEN}`,
     "Content-Type": "application/json",
     ...extra,
   };
@@ -38,14 +38,14 @@ async function pedir<T>(url: string, init: RequestInit, etiqueta: string): Promi
     const signal = init.signal ? AbortSignal.any([init.signal as AbortSignal, timeoutSignal]) : timeoutSignal;
     const res = await fetch(url, { ...init, signal });
     if (!res.ok) {
-      console.error(`Supabase ${etiqueta}: ${res.status} ${await res.text().catch(() => "")}`);
+      console.error(`BBW ${etiqueta}: ${res.status} ${await res.text().catch(() => "")}`);
       return null;
     }
     if (res.status === 204) return null;
     const texto = await res.text();
     return texto ? (JSON.parse(texto) as T) : null;
   } catch (e) {
-    console.error(`Supabase ${etiqueta}:`, e);
+    console.error(`BBW ${etiqueta}:`, e);
     return null;
   }
 }
@@ -73,7 +73,7 @@ export interface ThumbnailRow {
  * vez de servirse instantaneas desde el cache. */
 const LOTE_THUMBNAILS = 50;
 
-/** Trae del cache de Supabase las miniaturas ya generadas para estos ids. */
+/** Trae del cache del servidor las miniaturas ya generadas para estos ids. */
 export async function fetchCachedThumbnails(
   ids: string[]
 ): Promise<Map<string, ThumbnailRow>> {

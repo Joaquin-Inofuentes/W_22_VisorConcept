@@ -2,7 +2,7 @@
  * TTL del cache de listados de carpeta (`drive_folder_cache`) — C-15, hermano
  * de R3-01.
  *
- * Separado de `supabaseClient.ts` a proposito: ese archivo importa
+ * Separado de `datosClient.ts` a proposito: ese archivo importa
  * `../config` sin extension, que Vite resuelve pero el `node --test` que usan
  * los tests de este repo (ver `src/lib/erroresDescarga.test.mjs`) no — Node
  * ejecuta TypeScript con sintaxis erasable pero sigue exigiendo resolucion de

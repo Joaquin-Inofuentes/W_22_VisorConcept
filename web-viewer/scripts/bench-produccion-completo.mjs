@@ -2,7 +2,7 @@
 // real de dibujo:
 //   1. Zoom + pan repetidos sobre el lienzo -> NO debe recargar lo ya cargado
 //   2. Abrir la foto desde la galeria -> pan, zoom, rotar, descargar (PDF/JPG/PNG)
-//   3. Chequea en Supabase (visor_eventos) que "abrir" (via URL directa) NO
+//   3. Chequea en el servidor (visor_eventos) que "abrir" (via URL directa) NO
 //      se loguea, pero "descargar" (foto) SI, para confirmar que lectura de
 //      codigo empirica.
 //

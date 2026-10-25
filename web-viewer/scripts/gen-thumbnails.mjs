@@ -1,5 +1,5 @@
 // Genera las miniaturas de todos los .concepts bajados por crawl-drive.mjs y
-// las sube a Supabase (tabla concept_thumbnails), usando el MISMO codigo que
+// las sube al servidor (tabla concept_thumbnails), usando el MISMO codigo que
 // la app (src/VisorConcept/parser.ts + src/Gallery/thumbnail.ts) dentro de un
 // Chrome headless — asi la miniatura cacheada es identica a la que generaria
 // el navegador del usuario.
@@ -18,7 +18,7 @@ import { createServer } from "node:http";
 import path from "node:path";
 import puppeteer from "puppeteer";
 
-const SUPABASE_URL = "https://babelbim-worker.datafiles.workers.dev/v1/bim";
+const BBW_URL = "https://babelbim-worker.datafiles.workers.dev/v1/bim";
 const ANON_KEY =
   "bbw_pub_23ac1e410efd14afd380458d3e78959c2bf22b0b87b1172d";
 const CACHE_DIR = path.resolve(".cache/concepts");
@@ -145,7 +145,7 @@ for (let i = 0; i < files.length; i++) {
     );
 
     if (!noUpload) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/concept_thumbnails`, {
+      const res = await fetch(`${BBW_URL}/rest/v1/concept_thumbnails`, {
         method: "POST",
         headers: {
           apikey: ANON_KEY,

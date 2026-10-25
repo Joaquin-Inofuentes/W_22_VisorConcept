@@ -10,8 +10,8 @@ import { conRespaldoDrive } from "./transporte";
 import type { DriveFolderRef, DriveListing } from "./driveClient";
 import {
   fetchCachedThumbnails, upsertThumbnail, fetchAllFolderCache, upsertFolderCache, cacheDeCarpetaVencido,
-} from "./supabaseClient";
-import type { FolderCacheRow, ThumbnailRow } from "./supabaseClient";
+} from "./datosClient";
+import type { FolderCacheRow, ThumbnailRow } from "./datosClient";
 import { thumbnailDeArchivo, placeholderArchivo, miniaturaDeDrive } from "./thumbnail";
 import { detalleProxy, explicarFalloDescarga, sospechaArchivoVacio, extensionNoConcepts, MENSAJE_ARCHIVO_VACIO } from "../lib/erroresDescarga";
 import { renderDocumentEntry, exportSectionsAsPdf, exportSectionsAsZip } from "./exportRender";
@@ -330,14 +330,14 @@ export function Gallery({ hidden, onOpen, onUpload, rutaInicial, onRutaCambio, o
   const arranqueAvisadoRef = useRef(false);
   const toastTimerRef = useRef<number | null>(null);
   // Arbol de carpetas ya visitadas/crawleadas (solo ids/nombres), traido
-  // entero de Supabase una vez al montar. Mientras una carpeta este aca,
+  // entero del servidor una vez al montar. Mientras una carpeta este aca,
   // entrar/salir de ella es instantaneo: no hace falta pegarle a Drive.
   const folderTreeCacheRef = useRef<Map<string, FolderCacheRow>>(new Map());
   const folderTreeLoadedRef = useRef(false);
   /**
-   * Miniaturas ya traidas de Supabase en esta sesion, por id de archivo.
+   * Miniaturas ya traidas del servidor en esta sesion, por id de archivo.
    *
-   * Antes `loadFolder` pegaba a Supabase por las miniaturas CADA vez que se
+   * Antes `loadFolder` pegaba al servidor por las miniaturas CADA vez que se
    * entraba a una carpeta, aunque el listado (`folderTreeCacheRef`, arriba)
    * ya estuviera cacheado y la carpeta se hubiera visitado hace un segundo
    * -- volver "atras" y "adelante" en el arbol bajaba la misma data una y
@@ -456,7 +456,7 @@ export function Gallery({ hidden, onOpen, onUpload, rutaInicial, onRutaCambio, o
   );
 
   // Carga (o refresca) el listado de una carpeta puntual: subcarpetas +
-  // archivos, cruzando con el cache de Supabase para mostrar miniaturas ya
+  // archivos, cruzando con el cache del servidor para mostrar miniaturas ya
   // generadas al instante y solo procesar las que faltan. En un refresh no
   // se limpia la grilla antes de tener la respuesta nueva, para no hacer
   // parpadear lo que ya estaba mostrandose; si el listado nuevo es
@@ -464,7 +464,7 @@ export function Gallery({ hidden, onOpen, onUpload, rutaInicial, onRutaCambio, o
   // un cartelito en vez de re-renderizar todo en silencio.
   //
   // El listado en si (subcarpetas + archivos, solo nombres) primero se
-  // busca en el arbol cacheado de Supabase: si ya esta ahi, se muestra al
+  // busca en el arbol cacheado del servidor: si ya esta ahi, se muestra al
   // instante sin pegarle a Drive. Solo se pega a Drive en vivo si la
   // carpeta nunca se cacheo, o si es un refresh explicito — y en ese caso
   // el resultado se vuelve a cachear para la proxima.
@@ -486,7 +486,7 @@ export function Gallery({ hidden, onOpen, onUpload, rutaInicial, onRutaCambio, o
         // fresco. Sin este chequeo, un archivo re-subido por Concepts con
         // el mismo nombre (id nuevo en Drive) quedaba sirviendose con el id
         // viejo hasta que alguien apretara "Refrescar" a mano en esa
-        // carpeta puntual — ver `cacheDeCarpetaVencido` en supabaseClient.ts.
+        // carpeta puntual — ver `cacheDeCarpetaVencido` en datosClient.ts.
         const cachedRaw = !isRefresh ? folderTreeCacheRef.current.get(folderId) : undefined;
         const cached = cachedRaw && !cacheDeCarpetaVencido(cachedRaw) ? cachedRaw : undefined;
         let listing: DriveListing;
@@ -525,7 +525,7 @@ export function Gallery({ hidden, onOpen, onUpload, rutaInicial, onRutaCambio, o
 
         setFolders(listing.folders);
 
-        // Solo se pide a Supabase lo que todavia no esta en el cache de esta
+        // Solo se pide al servidor lo que todavia no esta en el cache de esta
         // sesion. Con una carpeta ya visitada (volver atras, o el refresh
         // periodico), eso es normalmente CERO ids -- cero requests.
         const idsFaltantes = listing.files.map((f) => f.id).filter((id) => !thumbnailCacheRef.current.has(id));
@@ -784,7 +784,7 @@ export function Gallery({ hidden, onOpen, onUpload, rutaInicial, onRutaCambio, o
 
   const restablecerTodo = async () => {
     // Borra TODO lo local: rasterizados, recientes, nombre de usuario y tema.
-    // No toca Drive ni Supabase — solo lo que esta guardado en este telefono.
+    // No toca Drive ni el servidor — solo lo que esta guardado en este telefono.
     try {
       await vaciarCache();
       await vaciarRecientes();

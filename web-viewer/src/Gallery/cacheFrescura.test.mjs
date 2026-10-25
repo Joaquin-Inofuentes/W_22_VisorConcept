@@ -2,7 +2,7 @@
 //
 // Mismo patron que src/lib/erroresDescarga.test.mjs: Node 24 corre TypeScript
 // con sintaxis erasable sin flags, asi que este test importa el modulo
-// publicado tal cual. Se importa `cacheFrescura.ts` (no `supabaseClient.ts`,
+// publicado tal cual. Se importa `cacheFrescura.ts` (no `datosClient.ts`,
 // que lo re-exporta) porque ese ultimo arrastra `../config` con un import sin
 // extension: Vite lo resuelve, pero la resolucion ESM estricta de
 // `node --test` no — ver el comentario de `cacheFrescura.ts`.

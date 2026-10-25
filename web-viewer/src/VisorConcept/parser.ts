@@ -352,7 +352,7 @@ export async function readEmbeddedThumbnail(
     // reindexado masivo (`driveCrawler.ts`), que interpreta null como
     // "sin miniatura para este archivo" y sigue de largo -- un 502
     // transitorio dejaba un archivo marcado como sin vista previa PARA
-    // SIEMPRE en el cache de Supabase, con reintentar como unico arreglo
+    // SIEMPRE en el cache del servidor, con reintentar como unico arreglo
     // manual. Un solo reintento corto cubre el caso comun.
     await new Promise((r) => setTimeout(r, 400));
     try {

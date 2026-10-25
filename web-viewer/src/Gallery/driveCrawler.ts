@@ -1,5 +1,5 @@
 import { listDriveFolder, driveFileUrl, driveAuthHeaders } from "./driveClient";
-import { upsertFolderCache, upsertThumbnail } from "./supabaseClient";
+import { upsertFolderCache, upsertThumbnail } from "./datosClient";
 import { renderThumbnailDataUrl, thumbnailFromRemote } from "./thumbnail";
 import { parseConceptsRemote } from "../VisorConcept/parser";
 import { DRIVE_FOLDER_ID } from "../config";
@@ -13,7 +13,7 @@ export interface CrawlProgress {
 
 /**
  * Recorre TODO el arbol de Drive desde la raiz (sin limite de profundidad),
- * cachea el listado de cada carpeta en Supabase (para navegacion instantanea)
+ * cachea el listado de cada carpeta en el servidor (para navegacion instantanea)
  * y regenera el thumbnail de cada archivo desde cero (fuerza la actualizacion,
  * no solo llena huecos). Pensado para correrse manualmente cuando hace falta
  * un refresco completo, no en cada carga de la app.

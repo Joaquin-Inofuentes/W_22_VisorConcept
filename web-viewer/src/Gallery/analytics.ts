@@ -1,4 +1,4 @@
-import { insertEvento } from "./supabaseClient";
+import { insertEvento } from "./datosClient";
 
 export type DescargaOrigen = "galeria" | "lienzo" | "foto";
 

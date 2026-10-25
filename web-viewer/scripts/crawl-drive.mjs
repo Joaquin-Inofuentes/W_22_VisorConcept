@@ -11,10 +11,10 @@ import { mkdir, writeFile, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-const SUPABASE_URL = "https://babelbim-worker.datafiles.workers.dev/v1/bim";
+const BBW_URL = "https://babelbim-worker.datafiles.workers.dev/v1/bim";
 const ANON_KEY =
   "bbw_pub_23ac1e410efd14afd380458d3e78959c2bf22b0b87b1172d";
-const FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
+const FUNCTIONS_URL = `${BBW_URL}/functions/v1`;
 const ROOT_FOLDER = "1lAlcv9-g6HmWVKkYMcrQQWBD3ew15i5Q";
 
 const OUT_DIR = path.resolve(process.argv[2] || ".cache/concepts");

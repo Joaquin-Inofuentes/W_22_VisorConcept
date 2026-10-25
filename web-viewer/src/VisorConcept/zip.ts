@@ -59,7 +59,7 @@ export class ErrorProxyConcepts extends Error {
   readonly codigo: string | null;
   /** Etiqueta corta y estable: drive-404, drive-sin-rangos, timeout, ... */
   readonly causa: string | null;
-  /** Id del fallo en los logs de Supabase: es lo que hay que mandar para que
+  /** Id del fallo en los logs del servidor: es lo que hay que mandar para que
    * alguien pueda encontrar la linea. */
   readonly idFallo: string | null;
 
