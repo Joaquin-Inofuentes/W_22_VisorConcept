@@ -21,3 +21,12 @@ AndroidSimulator/
 APK/_patch/
 cf/.dist/
 .wrangler/
+
+# web-concepts: derivados del APK y del corpus. El repo es PUBLICO (PLAN_v2 R2).
+/_RE/
+/_PLAN_WEB_CONCEPTS/referencia/
+/_PLAN_WEB_CONCEPTS/evidencia/
+/web-concepts/.apk-assets/
+*.concepts
+!/Ejemplo/Dibujo12.concepts
+.sync-conflict*
