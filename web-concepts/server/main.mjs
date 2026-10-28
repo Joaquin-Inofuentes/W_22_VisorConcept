@@ -1,9 +1,13 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const PORT = 8092;
 const CORPUS_DIR = 'C:\\ARQ\\BIM\\Concepts';
+const INDEX_HTML_PATH = path.resolve(__dirname, '..', 'index.html');
 
 const server = http.createServer((req, res) => {
   const host = req.headers.host || '';
@@ -13,7 +17,15 @@ const server = http.createServer((req, res) => {
   }
 
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'");
+  res.setHeader('Content-Security-Policy', "default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'");
+
+  // Servir aplicacion web en la raiz
+  if (req.url === '/' || req.url === '/index.html') {
+    if (fs.existsSync(INDEX_HTML_PATH)) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      return res.end(fs.readFileSync(INDEX_HTML_PATH));
+    }
+  }
 
   if (req.url === '/api/salud') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -40,7 +52,7 @@ const server = http.createServer((req, res) => {
         }
       }
       scan(CORPUS_DIR);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       return res.end(JSON.stringify(files));
     } catch (e) {
       res.writeHead(500, { 'Content-Type': 'application/json' });

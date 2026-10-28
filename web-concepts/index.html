@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Concepts Web — Visor y Editor</title>
+  <style>
+    :root {
+      --bg: #1e1e1e;
+      --panel: #252526;
+      --border: #333333;
+      --text: #cccccc;
+      --accent: #007acc;
+      --accent-hover: #0098ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #sidebar {
+      width: 320px;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .badge {
+      background: #333;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      color: #aaa;
+    }
+    #search-box {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    #search-input {
+      width: 100%;
+      background: #1e1e1e;
+      border: 1px solid #444;
+      padding: 8px 12px;
+      border-radius: 4px;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+    }
+    #file-list {
+      flex: 1;
+      overflow-y: auto;
+      list-style: none;
+    }
+    .file-item {
+      padding: 10px 16px;
+      border-bottom: 1px solid #2a2a2a;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: background 0.15s ease;
+    }
+    .file-item:hover { background: #2a2d2e; }
+    .file-item.active { background: #37373d; border-left: 3px solid var(--accent); }
+    .file-name { font-size: 13px; font-weight: 500; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-sub { font-size: 11px; color: #888; }
+    #viewport {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: #141414;
+    }
+    #toolbar {
+      height: 48px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 16px;
+      z-index: 10;
+    }
+    .tool-btn {
+      background: #333;
+      border: 1px solid #444;
+      color: #eee;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .tool-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    #canvas-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    /* Rueda de herramientas flotante */
+    #toolwheel {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: rgba(35, 35, 38, 0.9);
+      border: 2px solid #555;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+    .tool-slot {
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .tool-sub {
+      font-size: 10px;
+      color: #888;
+      margin-top: 2px;
+    }
+    .color-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #000;
+      border: 2px solid #fff;
+      margin-top: 8px;
+    }
+    /* Panel de capas */
+    #layers-panel {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      width: 220px;
+      background: rgba(35, 35, 38, 0.9);
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+    }
+    .layer-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #aaa;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .layer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px;
+      background: #2b2b2e;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="sidebar">
+    <div class="header">
+      <span>PLANOS CONCEPTS</span>
+      <span class="badge" id="count-badge">Cargando...</span>
+    </div>
+    <div id="search-box">
+      <input type="text" id="search-input" placeholder="Buscar entre 261 planos...">
+    </div>
+    <ul id="file-list"></ul>
+  </div>
+
+  <div id="viewport">
+    <div id="toolbar">
+      <button class="tool-btn active" id="btn-pen">Pluma Fuente</button>
+      <button class="tool-btn" id="btn-ballpoint">Bolígrafo</button>
+      <button class="tool-btn" id="btn-marker">Marcador</button>
+      <button class="tool-btn" id="btn-eraser">Borrador</button>
+      <span style="flex: 1;"></span>
+      <span id="active-doc" style="font-size: 12px; color: #888;">Ningún plano seleccionado</span>
+    </div>
+
+    <div id="canvas-container">
+      <canvas id="view-canvas"></canvas>
+
+      <!-- Rueda de herramientas de Concepts -->
+      <div id="toolwheel">
+        <div class="tool-slot" id="wheel-tool">Pluma</div>
+        <div class="tool-sub" id="wheel-size">2.0 pt · 100%</div>
+        <div class="color-dot" id="wheel-color" style="background: #2b2b2b;"></div>
+      </div>
+
+      <!-- Panel de capas de Concepts -->
+      <div id="layers-panel">
+        <div class="layer-title">Capas del Plano</div>
+        <div id="layers-list">
+          <div class="layer-row"><span>Capa 1 (Trazos)</span><span>👁️ 100%</span></div>
+          <div class="layer-row"><span>Capa Fondo</span><span>👁️ Papel</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const listEl = document.getElementById('file-list');
+    const badgeEl = document.getElementById('count-badge');
+    const searchInput = document.getElementById('search-input');
+    const activeDocEl = document.getElementById('active-doc');
+    const canvas = document.getElementById('view-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let allFiles = [];
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth * window.devicePixelRatio;
+      canvas.height = canvas.parentElement.clientHeight * window.devicePixelRatio;
+      drawGrid();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function drawGrid() {
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.fillStyle = '#181818';
+      ctx.fillRect(0, 0, w, h);
+
+      // Dibujar grilla suave de papel milimetrado
+      ctx.strokeStyle = '#222222';
+      ctx.lineWidth = 1;
+      const step = 40 * window.devicePixelRatio;
+      for (let x = 0; x < w; x += step) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+      for (let y = 0; y < h; y += step) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+    }
+
+    // Cargar lista de planos desde la API local del servidor
+    async function loadFiles() {
+      try {
+        const res = await fetch('/api/archivos');
+        allFiles = await res.json();
+        badgeEl.textContent = allFiles.length + ' planos';
+        renderList(allFiles);
+        if (allFiles.length > 0) {
+          selectFile(allFiles[0]);
+        }
+      } catch (err) {
+        badgeEl.textContent = 'Error';
+        listEl.innerHTML = '<li style="padding: 16px; color: #ff6b6b;">No se pudo conectar a la API local.</li>';
+      }
+    }
+
+    function renderList(files) {
+      listEl.innerHTML = '';
+      files.forEach((f, idx) => {
+        const li = document.createElement('li');
+        li.className = 'file-item' + (idx === 0 ? ' active' : '');
+        li.innerHTML = `
+          <div class="file-name">${f.nombre}</div>
+          <div class="file-sub">${f.carpeta || 'Raíz'} · ${(f.bytes / 1024 / 1024).toFixed(1)} MB</div>
+        `;
+        li.onclick = () => {
+          document.querySelectorAll('.file-item').forEach(el => el.classList.remove('active'));
+          li.classList.add('active');
+          selectFile(f);
+        };
+        listEl.appendChild(li);
+      });
+    }
+
+    function selectFile(f) {
+      activeDocEl.textContent = `${f.nombre} (${(f.bytes / 1024 / 1024).toFixed(1)} MB)`;
+      drawGrid();
+      // Dibujar mensaje de carga y bienvenida en lienzo
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `${16 * window.devicePixelRatio}px sans-serif`;
+      ctx.fillText(`Plano activo: ${f.nombre}`, 180 * window.devicePixelRatio, 90 * window.devicePixelRatio);
+      ctx.fillStyle = '#888888';
+      ctx.font = `${13 * window.devicePixelRatio}px sans-serif`;
+      ctx.fillText(`Ubicación: ${f.carpeta || 'Raíz'}`, 180 * window.devicePixelRatio, 120 * window.devicePixelRatio);
+    }
+
+    searchInput.oninput = (e) => {
+      const q = e.target.value.toLowerCase();
+      const filtered = allFiles.filter(f => f.nombre.toLowerCase().includes(q) || f.carpeta.toLowerCase().includes(q));
+      renderList(filtered);
+    };
+
+    // Dibujo táctil/mouse interactivo
+    let isDrawing = false;
+    canvas.onpointerdown = (e) => {
+      isDrawing = true;
+      ctx.beginPath();
+      ctx.moveTo(e.offsetX * window.devicePixelRatio, e.offsetY * window.devicePixelRatio);
+    };
+    canvas.onpointermove = (e) => {
+      if (!isDrawing) return;
+      ctx.strokeStyle = '#3a86ff';
+      ctx.lineWidth = 3 * window.devicePixelRatio;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineTo(e.offsetX * window.devicePixelRatio, e.offsetY * window.devicePixelRatio);
+      ctx.stroke();
+    };
+    canvas.onpointerup = () => { isDrawing = false; };
+
+    resizeCanvas();
+    loadFiles();
+  </script>
+</body>
+</html>
